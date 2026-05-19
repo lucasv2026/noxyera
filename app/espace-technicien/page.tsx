@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Wrench, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, Wrench, AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
 
@@ -14,11 +14,20 @@ export default function EspaceTechnicienPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    // ── Mode démo : accès direct sans Supabase ──────────────────────────────
+    if (isDemoMode) {
+      router.push("/technicien/missions");
+      return;
+    }
+
+    // ── Mode production : auth Supabase ────────────────────────────────────
     const supabase = createClient();
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -47,66 +56,150 @@ export default function EspaceTechnicienPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ background: "#1B3A2D" }}
+      style={{
+        minHeight: "100vh",
+        background: "#1B3A2D",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+      }}
     >
       {/* Logo */}
-      <div className="mb-10">
+      <div style={{ marginBottom: "40px" }}>
         <Logo dark />
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        <div className="flex items-center justify-center gap-2 mb-1">
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "white",
+          borderRadius: "20px",
+          padding: "36px 32px",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.35)",
+        }}
+      >
+        {/* Titre */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "4px" }}>
           <Wrench size={18} style={{ color: "#F26522" }} />
-          <h1 className="text-xl font-bold" style={{ color: "#1B3A2D" }}>
+          <h1 style={{ fontSize: "20px", fontWeight: 700, color: "#1B3A2D", margin: 0 }}>
             Espace Technicien
           </h1>
         </div>
-        <p className="text-center text-sm mb-8" style={{ color: "#6B7280" }}>
-          Connexion — Accédez à vos missions du jour
+        <p style={{ textAlign: "center", fontSize: "13px", color: "#6B7280", margin: "0 0 28px" }}>
+          Accédez à vos missions du jour
         </p>
 
+        {/* Bannière démo */}
+        {isDemoMode && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "12px 16px",
+              background: "#FFF7ED",
+              border: "1px solid #FED7AA",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+            }}
+          >
+            <span style={{ fontSize: "16px" }}>🔓</span>
+            <div>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#92400E", margin: 0 }}>
+                Mode démo actif
+              </p>
+              <p style={{ fontSize: "12px", color: "#B45309", margin: "2px 0 0" }}>
+                Cliquez sur &quot;Accéder&quot; pour entrer sans identifiants.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Erreur */}
         {error && (
-          <div className="mb-5 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <AlertCircle size={15} className="shrink-0" />
+          <div
+            style={{
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              border: "1px solid #FECACA",
+              background: "#FEF2F2",
+              fontSize: "13px",
+              color: "#DC2626",
+            }}
+          >
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: "#374151" }}>
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>
               Email professionnel
             </label>
-            <div className="relative">
-              <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+            <div style={{ position: "relative" }}>
+              <Mail size={14} style={{ position: "absolute", left: "13px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="technicien@noxyera.com"
-                required
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-                style={{ border: "1.5px solid #E5E7EB", color: "#1A1A1A", background: "#F9FAFB" }}
+                placeholder={isDemoMode ? "Ignoré en mode démo" : "technicien@noxyera.com"}
+                required={!isDemoMode}
+                style={{
+                  width: "100%",
+                  paddingLeft: "40px",
+                  paddingRight: "16px",
+                  paddingTop: "11px",
+                  paddingBottom: "11px",
+                  border: "1.5px solid #E5E7EB",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  color: "#1A1A1A",
+                  background: isDemoMode ? "#F9FAFB" : "#F9FAFB",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  opacity: isDemoMode ? 0.5 : 1,
+                }}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: "#374151" }}>
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>
               Mot de passe
             </label>
-            <div className="relative">
-              <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+            <div style={{ position: "relative" }}>
+              <Lock size={14} style={{ position: "absolute", left: "13px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-                style={{ border: "1.5px solid #E5E7EB", color: "#1A1A1A", background: "#F9FAFB" }}
+                placeholder={isDemoMode ? "Ignoré en mode démo" : "••••••••"}
+                required={!isDemoMode}
+                style={{
+                  width: "100%",
+                  paddingLeft: "40px",
+                  paddingRight: "16px",
+                  paddingTop: "11px",
+                  paddingBottom: "11px",
+                  border: "1.5px solid #E5E7EB",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  color: "#1A1A1A",
+                  background: "#F9FAFB",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  opacity: isDemoMode ? 0.5 : 1,
+                }}
               />
             </div>
           </div>
@@ -114,22 +207,38 @@ export default function EspaceTechnicienPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: "#F26522", boxShadow: "0 4px 14px rgba(242,101,34,0.35)" }}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "14px",
+              borderRadius: "12px",
+              border: "none",
+              background: loading ? "#9CA3AF" : "#F26522",
+              color: "white",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: loading ? "none" : "0 4px 14px rgba(242,101,34,0.4)",
+            }}
           >
-            {loading && <Loader2 size={15} className="animate-spin" />}
-            {loading ? "Connexion…" : "Accéder à mes missions"}
+            {loading
+              ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Connexion…</>
+              : <>{isDemoMode ? "Accéder aux missions →" : "Accéder à mes missions"} {!loading && !isDemoMode && <ArrowRight size={14} />}</>
+            }
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-sm hover:underline" style={{ color: "#6B7280" }}>
-            ← Retour à l&apos;accueil
+        <div style={{ marginTop: "24px", textAlign: "center" }}>
+          <Link href="/login" style={{ fontSize: "13px", color: "#6B7280", textDecoration: "none" }}>
+            ← Espace client
           </Link>
         </div>
       </div>
 
-      <p className="mt-8 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+      <p style={{ marginTop: "28px", fontSize: "12px", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
         Accès réservé aux techniciens certifiés Certibiocide
       </p>
     </div>
