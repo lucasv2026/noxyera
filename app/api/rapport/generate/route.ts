@@ -145,25 +145,15 @@ export async function POST(request: NextRequest) {
 
           if (clientProfile?.email) {
             const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://noxyera.com'
-            const { Resend } = await import('resend')
-            const resend = new Resend(process.env.RESEND_API_KEY)
-
+            const { sendRapportEmail } = await import('@/lib/emails')
             const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-            await resend.emails.send({
-              from: 'Noxyera Rapports <rapports@noxyera.com>',
-              to: clientProfile.email,
-              subject: `Rapport HACCP disponible — ${site.nom ?? siteName}`,
-              html: `
-                <p>Bonjour ${clientProfile.prenom ?? ''},</p>
-                <p>Votre rapport d'intervention du <strong>${dateStr}</strong> est disponible sur votre espace client.</p>
-                <p>
-                  <a href="${siteUrl}/dashboard/rapports" style="display:inline-block;padding:12px 24px;background:#1B3A2D;color:white;border-radius:8px;text-decoration:none;font-weight:bold;">
-                    Télécharger le rapport →
-                  </a>
-                </p>
-                <p style="color:#9CA3AF;font-size:12px;">Noxyera — Hygiène & Dératisation professionnelle</p>
-              `,
-            })
+            await sendRapportEmail(
+              clientProfile.email,
+              (site as { client_id: string; nom?: string }).nom ?? siteName ?? 'Site inconnu',
+              pdfUrl ?? `${siteUrl}/dashboard/rapports`,
+              technicienNom,
+              dateStr,
+            )
           }
         }
       }

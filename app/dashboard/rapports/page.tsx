@@ -12,7 +12,7 @@ async function getRapports(): Promise<RapportWithRelations[]> {
     const { createClient } = await import("@/lib/supabase/server")
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return SUPABASE_DEMO_RAPPORTS
+    if (!user) return []
 
     const { data: profile } = await supabase
       .from("profiles")

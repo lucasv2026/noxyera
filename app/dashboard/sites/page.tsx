@@ -19,7 +19,7 @@ async function getData(): Promise<SitesData> {
     const { createClient } = await import("@/lib/supabase/server")
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+    if (!user) return { profile: SUPABASE_DEMO_PROFILE, sites: [] }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -88,6 +88,7 @@ export default async function SitesPage() {
         <div style={{ background: "white", borderRadius: "16px", padding: "64px 32px", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
           <Building2 size={40} style={{ color: "#E5E7EB", marginBottom: "16px" }} />
           <p style={{ fontSize: "16px", color: "#9CA3AF", margin: 0, fontWeight: 600 }}>Aucun site actif</p>
+          <p style={{ fontSize: "13px", color: "#D1D5DB", margin: "8px 0 0" }}>Vos sites apparaîtront ici une fois votre contrat activé.</p>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>

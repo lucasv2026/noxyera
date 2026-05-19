@@ -1,6 +1,14 @@
-import Link from "next/link";
-import { CheckCircle2, ArrowRight, Lock } from "lucide-react";
-import { Logo } from "@/components/logo";
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { CheckCircle2, ArrowRight, Lock } from "lucide-react"
+
+// Price IDs Stripe — placeholders jusqu'à configuration dans Stripe Dashboard
+const STRIPE_PRICES = {
+  ESSENTIEL_ANNUEL: process.env.NEXT_PUBLIC_STRIPE_PRICE_ESSENTIEL_ANNUEL || 'price_essentiel_placeholder',
+  SERENITE_ANNUEL: process.env.NEXT_PUBLIC_STRIPE_PRICE_SERENITE_ANNUEL || 'price_serenite_placeholder',
+}
 
 const ESSENTIEL = [
   "4 passages préventifs/an (trimestriel)",
@@ -8,7 +16,7 @@ const ESSENTIEL = [
   "Rapports HACCP basiques auto-générés",
   "Tableau de bord accès basique",
   "Interventions curatives facturées à part (€180–250)",
-];
+]
 
 const SERENITE = [
   "4 à 12 passages/an selon site",
@@ -18,101 +26,142 @@ const SERENITE = [
   "Tableau de bord historique complet",
   "Export PDF automatique",
   "Accès prioritaire technicien dédié",
-];
+]
 
 const EXEMPLES = [
   { secteur: "Restaurant 100m²", essentiel: 900, serenite: 1400 },
   { secteur: "Hôtel 20 chambres", essentiel: 1200, serenite: 2000 },
   { secteur: "Entrepôt 3 000m²", essentiel: 2000, serenite: 3500 },
-];
+]
 
 export default function TarifsPage() {
+  const [loadingPrice, setLoadingPrice] = useState<string | null>(null)
+
+  async function handleSouscrire(priceId: string) {
+    setLoadingPrice(priceId)
+    try {
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId,
+          clientEmail: 'demo@noxyera.fr', // sera remplacé par le vrai email après login
+          clientNom: 'Client Noxyera',
+        }),
+      })
+      const data = await res.json()
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+      } else {
+        alert('Stripe non configuré — contactez lucas@agencenikita.com')
+      }
+    } catch {
+      alert('Erreur réseau — veuillez réessayer')
+    } finally {
+      setLoadingPrice(null)
+    }
+  }
+
   return (
     <div style={{ background: "#F5F0E8", minHeight: "100vh" }}>
       {/* Nav */}
-      <header className="sticky top-0 z-10 px-6 py-4" style={{ background: "white", borderBottom: "1px solid #E5E7EB" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Logo />
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium px-4 py-2 rounded-xl transition-colors hover:bg-gray-100" style={{ color: "#1B3A2D" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 10, background: "white", borderBottom: "1px solid #E5E7EB", padding: "16px 24px" }}>
+        <div style={{ maxWidth: "1152px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link href="/" style={{ textDecoration: "none" }}>
+            <span style={{ fontSize: "20px", fontWeight: 800, color: "#1B3A2D" }}>Noxyera</span>
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Link href="/login" style={{ fontSize: "14px", fontWeight: 500, padding: "8px 16px", borderRadius: "12px", color: "#1B3A2D", textDecoration: "none" }}>
               Accès Client
             </Link>
-            <Link href="/" className="text-sm font-semibold px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90" style={{ background: "#F26522" }}>
+            <Link href="/" style={{ fontSize: "14px", fontWeight: 600, padding: "8px 16px", borderRadius: "12px", color: "white", background: "#F26522", textDecoration: "none" }}>
               Estimer mon tarif
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-16 space-y-16">
+      <main style={{ maxWidth: "1024px", margin: "0 auto", padding: "64px 24px" }}>
         {/* Hero */}
-        <div className="text-center">
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: "#D1FAE5", color: "#065F46" }}>
+        <div style={{ textAlign: "center", marginBottom: "64px" }}>
+          <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600, marginBottom: "16px", background: "#D1FAE5", color: "#065F46" }}>
             Tarifs transparents · Prix fixe · Sans commission
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4" style={{ color: "#1A1A1A" }}>
+          <h1 style={{ fontSize: "42px", fontWeight: 800, color: "#1A1A1A", margin: "0 0 16px" }}>
             Deux formules claires
           </h1>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: "#6B7280" }}>
+          <p style={{ fontSize: "18px", color: "#6B7280", maxWidth: "480px", margin: "0 auto" }}>
             Choisissez le niveau de protection adapté à votre activité. Tous les prix sont annuels HT.
           </p>
         </div>
 
         {/* Cards */}
-        <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "768px", margin: "0 auto 64px" }}>
           {/* Essentiel */}
-          <div className="rounded-3xl bg-white p-8 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>Formule</p>
-            <h2 className="text-2xl font-bold mb-1" style={{ color: "#1A1A1A" }}>Essentiel</h2>
-            <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-3xl font-bold" style={{ color: "#F26522" }}>À partir de 900 €</span>
-              <span className="text-sm font-medium" style={{ color: "#6B7280" }}>/an HT</span>
+          <div style={{ borderRadius: "24px", background: "white", padding: "32px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}>
+            <p style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B7280", margin: "0 0 8px" }}>Formule</p>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#1A1A1A", margin: "0 0 8px" }}>Essentiel</h2>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "28px", fontWeight: 800, color: "#F26522" }}>À partir de 900 €</span>
+              <span style={{ fontSize: "14px", fontWeight: 500, color: "#6B7280" }}>/an HT</span>
             </div>
-            <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
+            <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 24px" }}>
               La base pour être en conformité réglementaire.
             </p>
 
-            <ul className="space-y-3 mb-8">
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 32px", display: "flex", flexDirection: "column", gap: "12px" }}>
               {ESSENTIEL.map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-sm" style={{ color: "#374151" }}>
-                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "#6B7280" }} />
+                <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "#374151" }}>
+                  <CheckCircle2 size={15} style={{ color: "#6B7280", flexShrink: 0, marginTop: "2px" }} />
                   {item}
                 </li>
               ))}
             </ul>
 
+            <button
+              onClick={() => handleSouscrire(STRIPE_PRICES.ESSENTIEL_ANNUEL)}
+              disabled={loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                width: "100%", padding: "14px", borderRadius: "12px",
+                fontSize: "14px", fontWeight: 700,
+                background: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "#E5E7EB" : "#F26522",
+                color: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "#9CA3AF" : "white",
+                border: "none", cursor: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "not-allowed" : "pointer",
+                transition: "opacity 0.15s",
+              }}
+            >
+              {loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "Chargement…" : "Souscrire Essentiel"}
+              {loadingPrice !== STRIPE_PRICES.ESSENTIEL_ANNUEL && <ArrowRight size={15} />}
+            </button>
+
             <Link
               href="/#pest-alert"
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90"
-              style={{ background: "#F26522", color: "white" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "10px", padding: "10px", borderRadius: "12px", fontSize: "13px", fontWeight: 600, color: "#6B7280", textDecoration: "none", background: "#F9FAFB" }}
             >
-              Démarrer l&apos;audit gratuit
-              <ArrowRight size={15} />
+              Démarrer l&apos;audit gratuit d&apos;abord
             </Link>
           </div>
 
           {/* Sérénité */}
-          <div
-            className="rounded-3xl p-8 shadow-lg relative overflow-hidden"
-            style={{ background: "#1B3A2D" }}
-          >
-            <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: "#F26522", color: "white" }}>
+          <div style={{ borderRadius: "24px", padding: "32px", boxShadow: "0 8px 32px rgba(27,58,45,0.2)", background: "#1B3A2D", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: "16px", right: "16px", padding: "4px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, background: "#F26522", color: "white" }}>
               Recommandée
             </div>
 
-            <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>Formule</p>
-            <h2 className="text-2xl font-bold mb-1 text-white">Sérénité</h2>
-            <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-3xl font-bold text-white">Sur devis</span>
+            <p style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.5)", margin: "0 0 8px" }}>Formule</p>
+            <h2 style={{ fontSize: "24px", fontWeight: 800, color: "white", margin: "0 0 8px" }}>Sérénité</h2>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "28px", fontWeight: 800, color: "white" }}>Sur devis</span>
             </div>
-            <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.65)", margin: "0 0 24px" }}>
               Protection complète et conformité HACCP maximale.
             </p>
 
-            <ul className="space-y-3 mb-8">
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 32px", display: "flex", flexDirection: "column", gap: "12px" }}>
               {SERENITE.map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
-                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "#4ADE80" }} />
+                <li key={item} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", color: "rgba(255,255,255,0.85)" }}>
+                  <CheckCircle2 size={15} style={{ color: "#4ADE80", flexShrink: 0, marginTop: "2px" }} />
                   {item}
                 </li>
               ))}
@@ -120,8 +169,13 @@ export default function TarifsPage() {
 
             <a
               href="mailto:contact@noxyera.com"
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: "#22C55E", boxShadow: "0 4px 14px rgba(34,197,94,0.35)" }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                width: "100%", padding: "14px", borderRadius: "12px",
+                fontSize: "14px", fontWeight: 700, color: "white",
+                background: "#22C55E", boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
+                textDecoration: "none",
+              }}
             >
               Parler à un expert
               <ArrowRight size={15} />
@@ -130,80 +184,79 @@ export default function TarifsPage() {
         </div>
 
         {/* Exemples tarifaires */}
-        <div>
-          <h2 className="text-2xl font-bold text-center mb-8" style={{ color: "#1A1A1A" }}>
+        <div style={{ marginBottom: "64px" }}>
+          <h2 style={{ fontSize: "24px", fontWeight: 700, textAlign: "center", color: "#1A1A1A", margin: "0 0 32px" }}>
             Exemples de tarifs indicatifs
           </h2>
-          <div className="rounded-2xl bg-white overflow-hidden shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <div className="grid grid-cols-3 px-6 py-3 text-xs font-semibold uppercase tracking-wider" style={{ background: "#F5F0E8", color: "#6B7280" }}>
+          <div style={{ borderRadius: "16px", background: "white", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "12px 24px", background: "#F5F0E8", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#6B7280" }}>
               <span>Profil</span>
-              <span className="text-center">Essentiel</span>
-              <span className="text-center" style={{ color: "#1B3A2D" }}>Sérénité</span>
+              <span style={{ textAlign: "center" }}>Essentiel</span>
+              <span style={{ textAlign: "center", color: "#1B3A2D" }}>Sérénité</span>
             </div>
             {EXEMPLES.map((ex, i) => (
               <div
                 key={ex.secteur}
-                className="grid grid-cols-3 px-6 py-4 items-center"
-                style={{ borderTop: i > 0 ? "1px solid #F3F4F6" : undefined }}
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "16px 24px", alignItems: "center", borderTop: i > 0 ? "1px solid #F3F4F6" : undefined }}
               >
-                <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{ex.secteur}</span>
-                <span className="text-center text-sm font-semibold" style={{ color: "#6B7280" }}>
+                <span style={{ fontSize: "14px", fontWeight: 500, color: "#1A1A1A" }}>{ex.secteur}</span>
+                <span style={{ textAlign: "center", fontSize: "14px", fontWeight: 600, color: "#6B7280" }}>
                   {ex.essentiel.toLocaleString("fr-FR")} €/an
                 </span>
-                <span className="text-center text-sm font-bold" style={{ color: "#1B3A2D" }}>
+                <span style={{ textAlign: "center", fontSize: "14px", fontWeight: 700, color: "#1B3A2D" }}>
                   {ex.serenite.toLocaleString("fr-FR")} €/an
                 </span>
               </div>
             ))}
           </div>
-          <p className="text-xs text-center mt-3" style={{ color: "#9CA3AF" }}>
+          <p style={{ fontSize: "12px", textAlign: "center", marginTop: "12px", color: "#9CA3AF" }}>
             Tarifs HT indicatifs. Obtenez votre devis précis avec l&apos;estimateur en ligne.
           </p>
         </div>
 
         {/* Paiement sécurisé */}
-        <div className="rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center gap-5" style={{ background: "white", border: "1px solid rgba(0,0,0,0.06)" }}>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#F0FDF4" }}>
-              <Lock size={18} style={{ color: "#16A34A" }} />
+        <div style={{ borderRadius: "16px", padding: "28px 32px", display: "flex", flexDirection: "column", gap: "20px", background: "white", border: "1px solid rgba(0,0,0,0.06)", marginBottom: "64px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+              <div style={{ width: "40px", height: "40px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", background: "#F0FDF4" }}>
+                <Lock size={18} style={{ color: "#16A34A" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "#1A1A1A", margin: 0 }}>Paiement sécurisé</p>
+                <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>Propulsé par Stripe</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>Paiement sécurisé</p>
-              <p className="text-xs" style={{ color: "#6B7280" }}>Propulsé par Stripe</p>
-            </div>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: "24px" }}>
+              {["Paiement en ligne sécurisé", "Facture PDF automatique", "Renouvellement annuel automatique"].map((item) => (
+                <li key={item} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#374151" }}>
+                  <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="hidden sm:block w-px self-stretch" style={{ background: "#F3F4F6" }} />
-          <ul className="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm" style={{ color: "#374151" }}>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
-              Paiement en ligne sécurisé
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
-              Facture PDF automatique
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={14} style={{ color: "#16A34A" }} />
-              Renouvellement annuel automatique
-            </li>
-          </ul>
         </div>
 
-        {/* CTA */}
-        <div className="text-center">
+        {/* CTA final */}
+        <div style={{ textAlign: "center" }}>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: "#F26522", boxShadow: "0 4px 20px rgba(242,101,34,0.35)" }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              padding: "16px 32px", borderRadius: "16px",
+              fontSize: "16px", fontWeight: 700, color: "white",
+              background: "#F26522", boxShadow: "0 4px 20px rgba(242,101,34,0.35)",
+              textDecoration: "none",
+            }}
           >
             Obtenir mon estimation gratuite
             <ArrowRight size={18} />
           </Link>
-          <p className="text-sm mt-3" style={{ color: "#6B7280" }}>
+          <p style={{ fontSize: "14px", marginTop: "12px", color: "#6B7280" }}>
             En 60 secondes · Sans engagement · Sans CB
           </p>
         </div>
       </main>
     </div>
-  );
+  )
 }

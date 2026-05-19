@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 
 const SECTIONS = ["Mon compte", "Notifications", "Sécurité", "Facturation & abonnement"] as const
 type Section = typeof SECTIONS[number]
@@ -15,6 +16,79 @@ function ComingSoon({ title }: { title: string }) {
       <span style={{ padding: "6px 16px", borderRadius: "20px", background: "#FEF3C7", color: "#92400E", fontSize: "12px", fontWeight: 700 }}>
         Bientôt
       </span>
+    </div>
+  )
+}
+
+function FacturationSection({ stripeCustomerId }: { stripeCustomerId?: string | null }) {
+  const [loading, setLoading] = useState(false)
+
+  async function handleManageAbonnement() {
+    if (!stripeCustomerId) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: stripeCustomerId, returnUrl: window.location.href }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error ?? 'Erreur lors de l\'ouverture du portail Stripe')
+      }
+    } catch {
+      alert('Erreur réseau — veuillez réessayer')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!stripeCustomerId) {
+    return (
+      <div style={{ background: "white", borderRadius: "16px", padding: "32px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+        <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 12px" }}>Facturation & abonnement</h2>
+        <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 20px" }}>
+          Aucun abonnement actif. Découvrez nos offres pour accéder à toutes les fonctionnalités Noxyera.
+        </p>
+        <Link
+          href="/tarifs"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            padding: "10px 20px", borderRadius: "10px",
+            background: "#F26522", color: "white",
+            fontSize: "14px", fontWeight: 700,
+            textDecoration: "none",
+          }}
+        >
+          Voir les offres →
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: "white", borderRadius: "16px", padding: "32px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
+      <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 12px" }}>Facturation & abonnement</h2>
+      <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 20px" }}>
+        Gérez votre abonnement, vos moyens de paiement et téléchargez vos factures directement depuis le portail Stripe.
+      </p>
+      <button
+        onClick={handleManageAbonnement}
+        disabled={loading}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "6px",
+          padding: "10px 20px", borderRadius: "10px",
+          background: loading ? "#E5E7EB" : "#F26522",
+          color: loading ? "#9CA3AF" : "white",
+          fontSize: "14px", fontWeight: 700,
+          border: "none", cursor: loading ? "not-allowed" : "pointer",
+          transition: "background 0.15s",
+        }}
+      >
+        {loading ? "Chargement…" : "Gérer mon abonnement →"}
+      </button>
     </div>
   )
 }
@@ -43,6 +117,11 @@ function InputField({ label, defaultValue, type = "text" }: { label: string; def
     </div>
   )
 }
+
+// stripe_customer_id récupéré côté serveur serait mieux, mais pour un composant client
+// on lit depuis un data-attribute ou on le passe via props depuis un server component wrapper.
+// Pour l'instant on utilise null — à connecter quand Supabase est actif.
+const STRIPE_CUSTOMER_ID_PLACEHOLDER: string | null = null
 
 export default function ParametresPage() {
   const [activeSection, setActiveSection] = useState<Section>("Mon compte")
@@ -85,7 +164,9 @@ export default function ParametresPage() {
 
         {/* Contenu */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {activeSection === "Mon compte" ? (
+          {activeSection === "Facturation & abonnement" ? (
+            <FacturationSection stripeCustomerId={STRIPE_CUSTOMER_ID_PLACEHOLDER} />
+          ) : activeSection === "Mon compte" ? (
             <>
               {/* Informations entreprise */}
               <div style={{ background: "white", borderRadius: "16px", padding: "28px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
