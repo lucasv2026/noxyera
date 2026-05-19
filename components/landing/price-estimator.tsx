@@ -1,0 +1,464 @@
+"use client";
+
+import { useMemo, useState, useEffect, type FormEvent } from "react";
+import {
+  ArrowRight,
+  Building2,
+  Check,
+  Factory,
+  Hotel,
+  Loader2,
+  Store,
+  Truck,
+  Warehouse,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+} from "lucide-react";
+import {
+  calculerPrix,
+  formuleSuggeree,
+  positionVsMarche,
+  BENCHMARK_MARCHE,
+  SUPERFICIE_CONFIG,
+  frequences,
+  secteurs,
+  type Frequence,
+  type Secteur,
+} from "@/lib/pricing";
+import { cn } from "@/lib/utils";
+
+const secteurIcons = {
+  restaurant:      Store,
+  hotel:           Hotel,
+  entrepot:        Warehouse,
+  agroalimentaire: Factory,
+  immeuble:        Building2,
+  bureau:          Truck,
+};
+
+const euroFormatter = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+function formatSuperficie(v: number): string {
+  return `${v.toLocaleString("fr-FR")} m²`;
+}
+
+type SubmitState = "idle" | "loading" | "success" | "error";
+
+interface PriceEstimatorProps {
+  defaultSecteur?: Secteur;
+}
+
+export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
+  const [secteur, setSecteur]       = useState<Secteur>(defaultSecteur ?? "restaurant");
+  const [superficie, setSuperficie] = useState<number>(SUPERFICIE_CONFIG["restaurant"].defaultValue);
+  const [frequence, setFrequence]   = useState<Frequence>(4);
+  const [curatives, setCuratives]   = useState(true);
+  const [email, setEmail]           = useState("");
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [message, setMessage]       = useState("");
+
+  // When sector changes → reset superficie to sector default
+  useEffect(() => {
+    setSuperficie(SUPERFICIE_CONFIG[secteur].defaultValue);
+  }, [secteur]);
+
+  const cfg = SUPERFICIE_CONFIG[secteur];
+  const sliderPct = ((superficie - cfg.min) / (cfg.max - cfg.min)) * 100;
+
+  const formule  = formuleSuggeree(curatives, frequence);
+  const nuisible = curatives ? "multi" : "insectes";
+
+  const result = useMemo(
+    () => calculerPrix({ secteur, superficie, frequence, nuisible, formule }),
+    [secteur, superficie, frequence, nuisible, formule]
+  );
+
+  const position = positionVsMarche(result.prixAnnuel, secteur);
+  const bench    = BENCHMARK_MARCHE[secteur];
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitState("loading");
+    setMessage("");
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          secteur,
+          superficie,
+          frequence,
+          curatives,
+          nuisible,
+          prix_estime:      result.prixAnnuel,
+          formule_suggeree: formule,
+        }),
+      });
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) throw new Error(payload.message ?? "Impossible d'enregistrer la demande.");
+      setSubmitState("success");
+      setMessage(payload.message ?? "Estimation enregistrée.");
+    } catch (error) {
+      setSubmitState("error");
+      setMessage(error instanceof Error ? error.message : "Impossible d'enregistrer la demande.");
+    }
+  }
+
+  return (
+    <section
+      id="estimateur"
+      className="mx-auto grid max-w-7xl gap-8 px-6 py-16 lg:grid-cols-[1fr_400px]"
+    >
+      {/* ── Formulaire ─────────────────────────────────────────────────── */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
+        <div className="flex flex-col gap-2 border-b pb-6 md:flex-row md:items-end md:justify-between" style={{ borderColor: "#E5E7EB" }}>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "#F26522" }}>
+              Estimateur tarifaire
+            </p>
+            <h2 className="mt-2 text-3xl font-bold" style={{ color: "#1B3A2D" }}>
+              Votre tarif en 60 secondes
+            </h2>
+          </div>
+          <p className="text-sm" style={{ color: "#6B7280" }}>
+            Prix fixe annuel · sans frais cachés
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-10">
+
+          {/* ── Étape 1 : Secteur ── */}
+          <EstimatorStep number="1" title="Secteur d'activité">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {secteurs.map((item) => {
+                const Icon = secteurIcons[item.id];
+                const selected = secteur === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSecteur(item.id)}
+                    className={cn(
+                      "flex min-h-20 items-start gap-3 rounded-xl border p-4 text-left transition-all",
+                      selected
+                        ? "border-orange-300 bg-orange-50 shadow-sm"
+                        : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50"
+                    )}
+                  >
+                    <span className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                      selected ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-500"
+                    )}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className={cn("text-sm font-semibold leading-tight", selected ? "text-stone-800" : "text-stone-600")}>
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </EstimatorStep>
+
+          {/* ── Étape 2 : Superficie ── */}
+          <EstimatorStep number="2" title={`Superficie (${cfg.unite})`}>
+            <div className="rounded-xl p-5" style={{ background: "#F9F7F4", border: "1px solid #E8E2D9" }}>
+              {/* Valeur affichée */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium" style={{ color: "#9CA3AF" }}>
+                  {formatSuperficie(cfg.min)}
+                </span>
+                <span
+                  className="rounded-xl px-4 py-1.5 text-base font-black"
+                  style={{ background: "#F26522", color: "white", minWidth: "110px", textAlign: "center" }}
+                >
+                  {formatSuperficie(superficie)}
+                </span>
+                <span className="text-sm font-medium" style={{ color: "#9CA3AF" }}>
+                  {formatSuperficie(cfg.max)}
+                </span>
+              </div>
+
+              {/* Slider avec track custom */}
+              <div className="relative mt-2 px-1">
+                <div
+                  className="absolute top-1/2 left-0 h-2 rounded-full -translate-y-1/2"
+                  style={{ width: "100%", background: "#E0D9D0" }}
+                />
+                <div
+                  className="absolute top-1/2 left-0 h-2 rounded-full -translate-y-1/2 pointer-events-none"
+                  style={{ width: `${sliderPct}%`, background: "#F26522" }}
+                />
+                <input
+                  type="range"
+                  min={cfg.min}
+                  max={cfg.max}
+                  step={cfg.step}
+                  value={superficie}
+                  onChange={(e) => setSuperficie(Number(e.target.value))}
+                  className="relative w-full h-2 appearance-none bg-transparent cursor-pointer"
+                  style={{ zIndex: 1 }}
+                  aria-label="Superficie"
+                />
+              </div>
+
+              <p className="mt-4 text-xs" style={{ color: "#9CA3AF" }}>
+                {cfg.exemples}
+              </p>
+            </div>
+          </EstimatorStep>
+
+          {/* ── Étape 3 : Fréquence ── */}
+          <EstimatorStep number="3" title="Fréquence de passage">
+            <div className="grid gap-3 md:grid-cols-3">
+              {frequences.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setFrequence(item.value)}
+                  className={cn(
+                    "rounded-xl border p-4 text-left transition-all",
+                    frequence === item.value
+                      ? "border-orange-300 bg-orange-50 shadow-sm"
+                      : "border-stone-200 bg-white hover:border-stone-300"
+                  )}
+                >
+                  <span className="block font-bold text-sm" style={{ color: "#1B3A2D" }}>
+                    {item.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs" style={{ color: "#6B7280" }}>
+                    {item.cadence}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </EstimatorStep>
+
+          {/* ── Étape 4 : Curatives ── */}
+          <EstimatorStep number="4" title="Interventions curatives (infestations)">
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setCuratives(true)}
+                className={cn(
+                  "rounded-xl border p-4 text-left transition-all",
+                  curatives
+                    ? "border-orange-300 bg-orange-50 shadow-sm"
+                    : "border-stone-200 bg-white hover:border-stone-300"
+                )}
+              >
+                <span className="block font-bold text-sm" style={{ color: "#1B3A2D" }}>
+                  Incluses dans le forfait
+                </span>
+                <span className="mt-1 block text-xs" style={{ color: "#6B7280" }}>
+                  Recommandé pour les sites à risque — illimité Sérénité.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCuratives(false)}
+                className={cn(
+                  "rounded-xl border p-4 text-left transition-all",
+                  !curatives
+                    ? "border-orange-300 bg-orange-50 shadow-sm"
+                    : "border-stone-200 bg-white hover:border-stone-300"
+                )}
+              >
+                <span className="block font-bold text-sm" style={{ color: "#1B3A2D" }}>
+                  Facturées à part (€200–400)
+                </span>
+                <span className="mt-1 block text-xs" style={{ color: "#6B7280" }}>
+                  Adapté aux sites à faible risque d&apos;infestation.
+                </span>
+              </button>
+            </div>
+          </EstimatorStep>
+        </div>
+      </div>
+
+      {/* ── Panel résultat ─────────────────────────────────────────────── */}
+      <aside className="h-fit rounded-2xl text-white shadow-lg lg:sticky lg:top-6" style={{ background: "#1B3A2D" }}>
+        {/* Prix principal */}
+        <div className="px-6 pt-6 pb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+          <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
+            Tarif estimé
+          </p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-black" style={{ color: "#F26522" }}>
+              {euroFormatter.format(result.prixAnnuel)}
+            </span>
+            <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
+          </div>
+          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+            soit <strong style={{ color: "white" }}>{euroFormatter.format(result.prixParPassage)}</strong> / passage ·{" "}
+            <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(result.prixAnnuel / 12))}</strong> / mois
+          </p>
+        </div>
+
+        {/* Badge position marché */}
+        <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+          {position === "competitif" && (
+            <div className="flex items-center gap-2">
+              <TrendingDown size={14} style={{ color: "#4ADE80" }} />
+              <span className="text-xs font-semibold" style={{ color: "#4ADE80" }}>
+                Prix inférieur aux concurrents locaux
+              </span>
+            </div>
+          )}
+          {position === "dans_fourchette" && (
+            <div className="flex items-center gap-2">
+              <Minus size={14} style={{ color: "#FCD34D" }} />
+              <span className="text-xs font-semibold" style={{ color: "#FCD34D" }}>
+                Dans la fourchette du marché
+              </span>
+            </div>
+          )}
+          {position === "premium" && (
+            <div className="flex items-center gap-2">
+              <TrendingUp size={14} style={{ color: "#F97316" }} />
+              <span className="text-xs font-semibold" style={{ color: "#F97316" }}>
+                Positionnement premium service
+              </span>
+            </div>
+          )}
+
+          {/* Barre fourchette marché */}
+          <div className="mt-3 space-y-1">
+            <div className="flex justify-between text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <span>Marché : {euroFormatter.format(bench.bas)}</span>
+              <span>{euroFormatter.format(bench.haut)}</span>
+            </div>
+            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(100, Math.max(4, ((result.prixAnnuel - bench.bas) / (bench.haut - bench.bas)) * 100))}%`,
+                  background: "#F26522",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Détail calcul */}
+        <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+          <p className="text-xs font-semibold mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Ce que comprend votre contrat
+          </p>
+          <div className="space-y-2">
+            {[
+              `${frequence} passages préventifs / an`,
+              `Technicien certifié Certibiocide`,
+              `Rapport HACCP après chaque intervention`,
+              curatives ? "Curatives illimitées incluses" : "Interventions préventives uniquement",
+              `Tableau de bord client + export PDF`,
+              formule === "serenite" ? "Formule Sérénité · priorité 24h" : "Formule Essentiel · délai 72h",
+            ].map((line) => (
+              <div key={line} className="flex items-start gap-2">
+                <Check size={12} className="mt-0.5 shrink-0" style={{ color: "#4ADE80" }} />
+                <span className="text-xs leading-tight" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  {line}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Formulaire capture / résultat */}
+        {submitState === "success" ? (
+          <div className="px-6 py-5 space-y-4">
+            {/* Résultat prix */}
+            <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                Votre estimation personnalisée
+              </p>
+              <p className="text-3xl font-black" style={{ color: "#F26522" }}>
+                {euroFormatter.format(result.prixAnnuel)}
+                <span className="text-sm font-medium ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
+              </p>
+              <p className="text-sm mt-1 font-semibold text-white">
+                Formule {formule === "serenite" ? "Sérénité" : "Essentiel"} recommandée
+              </p>
+              <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+                soit {euroFormatter.format(result.prixParPassage)}/passage · {euroFormatter.format(Math.round(result.prixAnnuel / 12))}/mois
+              </p>
+            </div>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+              ✓ Estimation envoyée à {email}
+            </p>
+            <a
+              href="mailto:contact@noxyera.com?subject=Demande audit gratuit Noxyera"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
+            >
+              Prendre rendez-vous pour un audit gratuit
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="px-6 py-5 space-y-3">
+            <p className="text-sm font-semibold text-white">
+              Recevoir cette estimation par email
+            </p>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@entreprise.fr"
+              className="h-11 w-full rounded-xl border-0 bg-white/10 px-4 text-sm text-white outline-none ring-2 ring-transparent transition placeholder:text-white/40 focus:ring-orange-400"
+            />
+            <button
+              type="submit"
+              disabled={submitState === "loading"}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
+              style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
+            >
+              {submitState === "loading" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              Voir mon estimation →
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            {submitState === "error" && message && (
+              <p className="text-xs text-orange-300">{message}</p>
+            )}
+          </form>
+        )}
+      </aside>
+    </section>
+  );
+}
+
+function EstimatorStep({
+  number,
+  title,
+  children,
+}: {
+  number: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-4 flex items-center gap-3">
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-black text-white"
+          style={{ background: "#1B3A2D" }}
+        >
+          {number}
+        </span>
+        <h3 className="text-lg font-bold" style={{ color: "#1B3A2D" }}>
+          {title}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
+}
