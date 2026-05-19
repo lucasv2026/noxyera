@@ -435,6 +435,98 @@ function ConformiteSection() {
   );
 }
 
+// ── Pourquoi les PME nous choisissent ────────────────────────────────────────
+function PmeSection() {
+  const benefits = [
+    {
+      title: "Conformité réglementaire garantie",
+      desc: "Rapports horodatés générés automatiquement après chaque visite.",
+    },
+    {
+      title: "Interventions rapides 24-48h",
+      desc: "Infestation détectée ? Un technicien intervient rapidement.",
+    },
+    {
+      title: "Techniciens vérifiés et experts",
+      desc: "Tous certifiés Certibiocide, formés HACCP.",
+    },
+    {
+      title: "Un prix transparent, une seule facture",
+      desc: "Pas de coût caché, pas de surprise.",
+    },
+    {
+      title: "Zéro administratif",
+      desc: "Rapports générés en automatique, téléchargeables depuis votre espace.",
+    },
+  ];
+
+  return (
+    <section className="px-6 py-20" style={{ background: "white" }}>
+      <div className="mx-auto max-w-6xl">
+        <div className="grid items-center gap-14 lg:grid-cols-2">
+          {/* Image cuisine */}
+          <div className="relative overflow-hidden rounded-2xl shadow-xl" style={{ aspectRatio: "4/3" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80"
+              alt="Cuisine professionnelle conforme HACCP"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div style={{ position: "absolute", bottom: "16px", left: "16px" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "6px",
+                padding: "6px 14px", borderRadius: "20px",
+                background: "rgba(255,255,255,0.95)", fontSize: "12px", fontWeight: 700, color: "#1B3A2D",
+              }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#27AE60", display: "inline-block" }} />
+                Cuisine certifiée conforme
+              </span>
+            </div>
+          </div>
+
+          {/* Bénéfices */}
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "#F26522" }}>
+              Pourquoi nous choisir
+            </p>
+            <h2 className="font-heading mb-8 text-4xl" style={{ color: "#1B3A2D" }}>
+              Pourquoi les PME nous choisissent
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {benefits.map((b, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                  <div style={{
+                    width: "28px", height: "28px", borderRadius: "50%",
+                    background: "#D1FAE5", display: "flex", alignItems: "center",
+                    justifyContent: "center", flexShrink: 0, marginTop: "2px",
+                  }}>
+                    <CheckCircle2 size={14} style={{ color: "#27AE60" }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "15px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 3px" }}>
+                      {b.title}
+                    </p>
+                    <p style={{ fontSize: "13px", color: "#6B7280", margin: 0, lineHeight: 1.5 }}>
+                      {b.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/#estimateur"
+              className="mt-8 inline-flex items-center gap-2 rounded-[14px] px-6 py-3.5 text-sm font-bold transition-opacity hover:opacity-90"
+              style={{ background: "#1B3A2D", color: "white" }}
+            >
+              Obtenir un devis gratuit <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CtaSection() {
   return (
     <section className="px-6 py-24 text-center" style={{ background: "#1b4332" }}>
@@ -498,6 +590,7 @@ export default function HomePage() {
       <FeaturesStrip />
       <PestAlertNetwork onSecteurSelect={setSecteurPreselect} />
       <HowItWorksSection />
+      <PmeSection />
       <SecteursSection onSecteurSelect={setSecteurPreselect} />
       <PlatformSection />
       <PriceEstimator defaultSecteur={secteurPreselect} />

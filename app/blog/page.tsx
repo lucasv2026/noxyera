@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Clock, Tag } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { BLOG_ARTICLES } from "@/lib/blog-data";
 import { Logo } from "@/components/logo";
 
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 };
 
 const CATEGORIE_COLORS: Record<string, { bg: string; text: string }> = {
-  HACCP:            { bg: "rgba(16,185,129,0.12)", text: "#10B981" },
-  Règlementation:   { bg: "rgba(96,165,250,0.12)", text: "#60A5FA" },
-  Nuisibles:        { bg: "rgba(245,158,11,0.12)",  text: "#F59E0B" },
-  "Bonnes pratiques": { bg: "rgba(167,139,250,0.12)", text: "#A78BFA" },
+  HACCP:              { bg: "#D1FAE5", text: "#065F46" },
+  Règlementation:     { bg: "#DBEAFE", text: "#1E40AF" },
+  Nuisibles:          { bg: "#FEF3C7", text: "#92400E" },
+  "Bonnes pratiques": { bg: "#EDE9FE", text: "#5B21B6" },
 };
 
 function formatDate(iso: string) {
@@ -27,74 +27,73 @@ function formatDate(iso: string) {
 
 export default function BlogPage() {
   const [featured, ...rest] = BLOG_ARTICLES;
-  const cat = CATEGORIE_COLORS[featured.categorie] ?? { bg: "rgba(255,255,255,0.08)", text: "white" };
+  const cat = CATEGORIE_COLORS[featured.categorie] ?? { bg: "#F3F4F6", text: "#6B7280" };
 
   return (
-    <div className="min-h-screen" style={{ background: "#0D1F17" }}>
-      {/* Nav */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <Logo />
-        <nav className="flex items-center gap-6 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-          <Link href="/" className="hover:text-white transition-colors">Accueil</Link>
-          <Link href="/tarifs" className="hover:text-white transition-colors">Tarifs</Link>
-          <Link
-            href="/login"
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: "#F26522" }}
-          >
-            Accès Client
-          </Link>
-        </nav>
+    <div style={{ minHeight: "100vh", background: "#F5F0E8" }}>
+      {/* Nav verte */}
+      <header style={{ background: "#1B3A2D", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px" }}>
+          <Logo dark />
+          <nav style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            <Link href="/" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Accueil</Link>
+            <Link href="/tarifs" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Tarifs</Link>
+            <Link
+              href="/login"
+              style={{ padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, color: "white", background: "#F26522", textDecoration: "none" }}
+            >
+              Accès Client
+            </Link>
+          </nav>
+        </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 pb-20">
+      <main style={{ maxWidth: "960px", margin: "0 auto", padding: "0 24px 80px" }}>
         {/* Header */}
-        <div className="py-12 text-center">
-          <p className="text-xs uppercase tracking-widest font-semibold mb-3" style={{ color: "#F26522", fontFamily: "monospace" }}>
+        <div style={{ padding: "48px 0 36px", textAlign: "center" }}>
+          <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#F26522", marginBottom: "10px" }}>
             Le Blog Noxyera
           </p>
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 style={{ fontSize: "36px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 12px", fontFamily: "var(--font-display), serif" }}>
             HACCP, Nuisibles & Conformité
           </h1>
-          <p className="text-base max-w-xl mx-auto" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <p style={{ fontSize: "15px", color: "#6B7280", maxWidth: "520px", margin: "0 auto", lineHeight: 1.6 }}>
             Guides pratiques pour les restaurateurs, hôteliers et responsables qualité qui veulent rester conformes sans effort.
           </p>
         </div>
 
         {/* Article à la une */}
-        <Link href={`/blog/${featured.slug}`} className="block mb-8 group">
+        <Link href={`/blog/${featured.slug}`} style={{ display: "block", marginBottom: "24px", textDecoration: "none" }}>
           <div
-            className="rounded-2xl p-8 transition-all group-hover:border-opacity-30"
-            style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{
+              borderRadius: "20px",
+              padding: "32px",
+              background: "white",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+              border: "1px solid rgba(0,0,0,0.05)",
+              transition: "box-shadow 0.2s",
+            }}
           >
-            <div className="flex items-center gap-3 mb-4">
-              <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: cat.bg, color: cat.text }}
-              >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <span style={{ padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600, background: cat.bg, color: cat.text }}>
                 {featured.categorie}
               </span>
-              <span
-                className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: "rgba(242,101,34,0.15)", color: "#F26522" }}
-              >
+              <span style={{ padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600, background: "#FFF7ED", color: "#F26522" }}>
                 À la une
               </span>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3 group-hover:text-green-300 transition-colors">
+            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 10px", fontFamily: "var(--font-display), serif" }}>
               {featured.titre}
             </h2>
-            <p className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 20px", lineHeight: 1.6 }}>
               {featured.description}
             </p>
-            <div className="flex items-center gap-4">
-              <span className="text-xs flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <span style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}>
                 <Clock size={11} /> {featured.tempsLecture} min de lecture
               </span>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                {formatDate(featured.date)}
-              </span>
-              <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#10B981" }}>
+              <span style={{ fontSize: "12px", color: "#9CA3AF" }}>{formatDate(featured.date)}</span>
+              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "5px", fontSize: "13px", fontWeight: 600, color: "#1B3A2D" }}>
                 Lire l&apos;article <ArrowRight size={12} />
               </span>
             </div>
@@ -102,34 +101,37 @@ export default function BlogPage() {
         </Link>
 
         {/* Grille des autres articles */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
           {rest.map((article) => {
-            const c = CATEGORIE_COLORS[article.categorie] ?? { bg: "rgba(255,255,255,0.08)", text: "white" };
+            const c = CATEGORIE_COLORS[article.categorie] ?? { bg: "#F3F4F6", text: "#6B7280" };
             return (
-              <Link key={article.slug} href={`/blog/${article.slug}`} className="group block">
+              <Link key={article.slug} href={`/blog/${article.slug}`} style={{ textDecoration: "none" }}>
                 <div
-                  className="rounded-2xl p-5 h-full flex flex-col transition-all"
-                  style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}
+                  style={{
+                    borderRadius: "16px",
+                    padding: "20px",
+                    background: "white",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                    border: "1px solid rgba(0,0,0,0.04)",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
                 >
-                  <span
-                    className="self-start px-2 py-0.5 rounded-full text-xs font-semibold mb-3"
-                    style={{ background: c.bg, color: c.text }}
-                  >
+                  <span style={{ alignSelf: "flex-start", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: c.bg, color: c.text, marginBottom: "12px" }}>
                     {article.categorie}
                   </span>
-                  <h3 className="text-sm font-bold text-white mb-2 flex-1 group-hover:text-green-300 transition-colors leading-snug">
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 8px", flex: 1, lineHeight: 1.4 }}>
                     {article.titre}
                   </h3>
-                  <p className="text-xs mb-4 line-clamp-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 16px", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                     {article.description}
                   </p>
-                  <div className="flex items-center gap-3 mt-auto">
-                    <span className="text-xs flex items-center gap-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "auto" }}>
+                    <span style={{ fontSize: "11px", display: "flex", alignItems: "center", gap: "4px", color: "#9CA3AF" }}>
                       <Clock size={10} /> {article.tempsLecture} min
                     </span>
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                      {formatDate(article.date)}
-                    </span>
+                    <span style={{ fontSize: "11px", color: "#9CA3AF" }}>{formatDate(article.date)}</span>
                   </div>
                 </div>
               </Link>
@@ -139,22 +141,26 @@ export default function BlogPage() {
 
         {/* CTA */}
         <div
-          className="mt-16 rounded-2xl p-8 text-center"
-          style={{ background: "#122B1E", border: "1px solid rgba(242,101,34,0.2)" }}
+          style={{
+            marginTop: "56px",
+            borderRadius: "20px",
+            padding: "36px 32px",
+            textAlign: "center",
+            background: "#1B3A2D",
+          }}
         >
-          <p className="text-xs uppercase tracking-widest font-semibold mb-3" style={{ color: "#F26522" }}>
+          <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#F26522", marginBottom: "10px" }}>
             Passez à l&apos;action
           </p>
-          <h2 className="text-2xl font-bold text-white mb-3">
+          <h2 style={{ fontSize: "24px", fontWeight: 700, color: "white", margin: "0 0 10px", fontFamily: "var(--font-display), serif" }}>
             Quel est le risque nuisibles de votre établissement ?
           </h2>
-          <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", margin: "0 0 24px" }}>
             Obtenez votre Pest Alert Score gratuit en 30 secondes.
           </p>
           <Link
             href="/suivi-sanitaire"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm"
-            style={{ background: "#F26522" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 24px", borderRadius: "12px", background: "#F26522", color: "white", fontWeight: 600, fontSize: "14px", textDecoration: "none" }}
           >
             Calculer mon score <ArrowRight size={14} />
           </Link>

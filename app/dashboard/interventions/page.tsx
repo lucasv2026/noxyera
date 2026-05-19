@@ -1,111 +1,142 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { Calendar, CheckCircle2, Clock, AlertTriangle, XCircle, Download, FileText, Filter } from "lucide-react";
-import { DEMO_YOOMA_INTERVENTIONS, DEMO_YOOMA_RAPPORTS, DEMO_YOOMA_SITES } from "@/lib/demo-data";
+import { useState } from "react"
+import { Calendar, CheckCircle2, Clock, XCircle, Download } from "lucide-react"
+import { SUPABASE_DEMO_SITES } from "@/lib/demo-data"
+import type { Intervention, Site } from "@/lib/types/dashboard"
 
-function TypeBadge({ type }: { type: "preventif" | "curatif" | "urgence" }) {
-  const map = {
+interface InterventionWithSite extends Intervention {
+  siteNom: string
+}
+
+function TypeBadge({ type }: { type: string }) {
+  const map: Record<string, { label: string; bg: string; color: string }> = {
     preventif: { label: "Préventif", bg: "#D1FAE5", color: "#065F46" },
     curatif:   { label: "Curatif",   bg: "#FEF3C7", color: "#92400E" },
     urgence:   { label: "Urgence",   bg: "#FEE2E2", color: "#991B1B" },
-  };
-  const { label, bg, color } = map[type];
+  }
+  const { label, bg, color } = map[type] ?? { label: type, bg: "#F3F4F6", color: "#6B7280" }
   return (
-    <span className="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style={{ background: bg, color }}>
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: bg, color }}>
       {label}
     </span>
-  );
+  )
 }
 
 function StatutBadge({ statut }: { statut: string }) {
   if (statut === "realise") return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style={{ background: "#D1FAE5", color: "#065F46" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#D1FAE5", color: "#065F46", whiteSpace: "nowrap" }}>
       <CheckCircle2 size={10} /> Réalisée
     </span>
-  );
+  )
   if (statut === "planifie") return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style={{ background: "#FEF3C7", color: "#92400E" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#FEF3C7", color: "#92400E", whiteSpace: "nowrap" }}>
       <Clock size={10} /> Planifiée
     </span>
-  );
-  if (statut === "en_cours") return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style={{ background: "#FEF3C7", color: "#D97706" }}>
-      <AlertTriangle size={10} /> En cours
-    </span>
-  );
+  )
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#F3F4F6", color: "#6B7280", whiteSpace: "nowrap" }}>
       <XCircle size={10} /> Annulée
     </span>
-  );
+  )
 }
 
+const TABS = ["Toutes", "Planifiées", "Réalisées", "Annulées"] as const
+
 export default function InterventionsPage() {
-  const [filterSite, setFilterSite]   = useState("all");
-  const [filterMois, setFilterMois]   = useState("all");
+  const [activeTab, setActiveTab] = useState<typeof TABS[number]>("Toutes")
+  const [filterSite, setFilterSite] = useState("all")
+  const [filterMois, setFilterMois] = useState("all")
 
-  // Build unique site options
-  const siteOptions = DEMO_YOOMA_SITES.map((s) => ({ id: s.id, label: s.nom.replace("Yooma Urban Lodge — ", "") }));
+  // Flatten all interventions from SUPABASE_DEMO_SITES
+  const allInterventions: InterventionWithSite[] = SUPABASE_DEMO_SITES.flatMap((site: Site) =>
+    (site.interventions ?? []).map((i) => ({ ...i, siteNom: site.nom }))
+  )
 
-  // Months present in interventions
+  const siteOptions = SUPABASE_DEMO_SITES.map((s) => ({ id: s.id, label: s.nom }))
+
   const allMonths = Array.from(
-    new Set(DEMO_YOOMA_INTERVENTIONS.map((i) => i.datePrevue.slice(0, 7)))
-  ).sort().reverse();
+    new Set(allInterventions.map((i) => i.date_prevue.slice(0, 7)))
+  ).sort().reverse()
 
-  const filtered = DEMO_YOOMA_INTERVENTIONS
-    .filter((i) => filterSite === "all" || i.siteId === filterSite)
-    .filter((i) => filterMois === "all" || i.datePrevue.startsWith(filterMois))
-    .sort((a, b) => new Date(b.datePrevue).getTime() - new Date(a.datePrevue).getTime());
+  const tabFiltered = allInterventions.filter((i) => {
+    if (activeTab === "Planifiées") return i.statut === "planifie"
+    if (activeTab === "Réalisées") return i.statut === "realise"
+    if (activeTab === "Annulées") return i.statut === "annule"
+    return true
+  })
 
-  // Map intervention → rapport
-  const rapportByIntervention = Object.fromEntries(
-    DEMO_YOOMA_RAPPORTS.map((r) => [r.interventionId, r])
-  );
+  const filtered = tabFiltered
+    .filter((i) => filterSite === "all" || i.site_id === filterSite)
+    .filter((i) => filterMois === "all" || i.date_prevue.startsWith(filterMois))
+    .sort((a, b) => new Date(b.date_prevue).getTime() - new Date(a.date_prevue).getTime())
 
   const counts = {
-    total:    DEMO_YOOMA_INTERVENTIONS.length,
-    realises: DEMO_YOOMA_INTERVENTIONS.filter((i) => i.statut === "realise").length,
-    planifie: DEMO_YOOMA_INTERVENTIONS.filter((i) => i.statut === "planifie").length,
-  };
+    Toutes:    allInterventions.length,
+    Planifiées: allInterventions.filter((i) => i.statut === "planifie").length,
+    Réalisées: allInterventions.filter((i) => i.statut === "realise").length,
+    Annulées:  allInterventions.filter((i) => i.statut === "annule").length,
+  }
 
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5">
+    <div style={{ padding: "32px 32px 64px" }}>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "#1A1A1A" }}>Interventions</h1>
-        <p className="text-sm mt-0.5" style={{ color: "#6B7280" }}>
-          Historique complet de toutes vos interventions anti-nuisibles
-        </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "var(--font-display), serif" }}>
+            Interventions
+          </h1>
+          <p style={{ fontSize: "14px", color: "#6B7280", margin: "4px 0 0" }}>
+            {allInterventions.length} intervention{allInterventions.length > 1 ? "s" : ""} au total
+          </p>
+        </div>
+        <button
+          style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            padding: "10px 18px", borderRadius: "10px",
+            background: "#F5F0E8", color: "#1B3A2D",
+            fontSize: "13px", fontWeight: 600,
+            border: "none", cursor: "pointer",
+          }}
+        >
+          <Download size={14} />
+          Exporter
+        </button>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: counts.total, color: "#1B3A2D", bg: "#F5F0E8" },
-          { label: "Réalisées", value: counts.realises, color: "#059669", bg: "#D1FAE5" },
-          { label: "Planifiées", value: counts.planifie, color: "#D97706", bg: "#FEF3C7" },
-        ].map(({ label, value, color, bg }) => (
-          <div key={label} className="rounded-2xl bg-white p-4 shadow-sm text-center" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <p className="text-xs font-medium mb-1" style={{ color: "#6B7280" }}>{label}</p>
-            <p className="text-2xl font-bold" style={{ color }}>{value}</p>
-          </div>
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "4px", marginBottom: "20px", flexWrap: "wrap" }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "20px",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 600,
+              background: activeTab === tab ? "#1B3A2D" : "white",
+              color: activeTab === tab ? "white" : "#6B7280",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            }}
+          >
+            {tab} <span style={{ opacity: 0.7, fontWeight: 400 }}>({counts[tab]})</span>
+          </button>
         ))}
       </div>
 
       {/* Filters */}
-      <div
-        className="flex flex-wrap items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm"
-        style={{ border: "1px solid rgba(0,0,0,0.06)" }}
-      >
-        <Filter size={14} style={{ color: "#6B7280" }} />
-        <span className="text-xs font-medium" style={{ color: "#6B7280" }}>Filtrer :</span>
-
+      <div style={{
+        display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px",
+        background: "white", padding: "14px 18px", borderRadius: "12px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)", marginBottom: "20px",
+      }}>
         <select
           value={filterSite}
           onChange={(e) => setFilterSite(e.target.value)}
-          className="text-sm rounded-xl px-3 py-1.5 outline-none font-medium"
-          style={{ background: "#F5F0E8", color: "#1B3A2D", border: "none" }}
+          style={{ fontSize: "13px", borderRadius: "8px", padding: "7px 12px", background: "#F5F0E8", color: "#1B3A2D", border: "none", outline: "none", fontWeight: 500 }}
         >
           <option value="all">Tous les sites</option>
           {siteOptions.map((s) => (
@@ -116,118 +147,128 @@ export default function InterventionsPage() {
         <select
           value={filterMois}
           onChange={(e) => setFilterMois(e.target.value)}
-          className="text-sm rounded-xl px-3 py-1.5 outline-none font-medium"
-          style={{ background: "#F5F0E8", color: "#1B3A2D", border: "none" }}
+          style={{ fontSize: "13px", borderRadius: "8px", padding: "7px 12px", background: "#F5F0E8", color: "#1B3A2D", border: "none", outline: "none", fontWeight: 500 }}
         >
           <option value="all">Tous les mois</option>
           {allMonths.map((m) => {
-            const [year, month] = m.split("-");
-            const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-            return <option key={m} value={m}>{label}</option>;
+            const [year, month] = m.split("-")
+            const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+            return <option key={m} value={m}>{label}</option>
           })}
         </select>
 
         {(filterSite !== "all" || filterMois !== "all") && (
           <button
-            onClick={() => { setFilterSite("all"); setFilterMois("all"); }}
-            className="text-xs font-medium underline"
-            style={{ color: "#6B7280" }}
+            onClick={() => { setFilterSite("all"); setFilterMois("all") }}
+            style={{ fontSize: "12px", color: "#9CA3AF", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
           >
             Réinitialiser
           </button>
         )}
 
-        <span className="ml-auto text-xs" style={{ color: "#6B7280" }}>
+        <span style={{ marginLeft: "auto", fontSize: "12px", color: "#9CA3AF" }}>
           {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-white shadow-sm overflow-hidden" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-        {/* Table header — desktop */}
-        <div
-          className="hidden lg:grid px-5 py-3 text-xs font-semibold uppercase tracking-wider border-b"
-          style={{
-            gridTemplateColumns: "1.5fr 1.5fr 1fr 1fr 1fr 1fr",
-            color: "#9CA3AF",
-            borderColor: "#F3F4F6",
-            background: "#FAFAFA",
-          }}
-        >
-          <span>Date</span>
+      <div style={{ background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+        {/* Header */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr",
+          padding: "12px 20px",
+          background: "#FAFAFA",
+          borderBottom: "1px solid #F3F4F6",
+          fontSize: "11px",
+          fontWeight: 700,
+          color: "#9CA3AF",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}>
           <span>Site</span>
+          <span>Date</span>
           <span>Technicien</span>
           <span>Type</span>
           <span>Statut</span>
-          <span>Rapport</span>
+          <span>Actions</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-16 text-center">
-            <Calendar size={32} className="mx-auto mb-3" style={{ color: "#D1D5DB" }} />
-            <p className="text-sm font-medium" style={{ color: "#6B7280" }}>Aucune intervention</p>
-            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Modifiez les filtres pour afficher plus de résultats.</p>
+          <div style={{ padding: "48px 32px", textAlign: "center" }}>
+            <Calendar size={32} style={{ color: "#D1D5DB", marginBottom: "12px" }} />
+            <p style={{ fontSize: "14px", color: "#6B7280", fontWeight: 500, margin: 0 }}>Aucune intervention</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {filtered.map((intervention) => {
-              const rapport = rapportByIntervention[intervention.id];
-              return (
-                <div
-                  key={intervention.id}
-                  className="flex flex-col lg:grid gap-3 lg:gap-0 px-5 py-4 hover:bg-gray-50 transition-colors"
-                  style={{ gridTemplateColumns: "1.5fr 1.5fr 1fr 1fr 1fr 1fr", alignItems: "center" }}
-                >
-                  {/* Date */}
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>
-                      {new Date(intervention.datePrevue).toLocaleDateString("fr-FR", {
-                        day: "numeric", month: "long", year: "numeric",
-                      })}
-                    </p>
-                    {intervention.dateReelle && intervention.dateReelle !== intervention.datePrevue && (
-                      <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>
-                        Réalisée le {new Date(intervention.dateReelle).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                      </p>
-                    )}
+          <div>
+            {filtered.map((intervention, idx) => (
+              <div
+                key={intervention.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr",
+                  padding: "14px 20px",
+                  alignItems: "center",
+                  borderBottom: idx < filtered.length - 1 ? "1px solid #F9FAFB" : "none",
+                  gap: "8px",
+                }}
+              >
+                {/* Site */}
+                <p style={{ fontSize: "13px", fontWeight: 600, color: "#1B3A2D", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {intervention.siteNom}
+                </p>
+
+                {/* Date */}
+                <p style={{ fontSize: "13px", color: "#374151", margin: 0 }}>
+                  {new Date(intervention.date_prevue).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                </p>
+
+                {/* Technicien avec avatar */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{
+                    width: "28px", height: "28px", borderRadius: "50%",
+                    background: "#F5F0E8", color: "#1B3A2D",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "10px", fontWeight: 700, flexShrink: 0,
+                  }}>
+                    TL
                   </div>
-
-                  {/* Site */}
-                  <p className="text-sm truncate" style={{ color: "#1A1A1A" }}>{intervention.siteNom}</p>
-
-                  {/* Technicien */}
-                  <p className="text-sm" style={{ color: "#6B7280" }}>{intervention.technicienNom}</p>
-
-                  {/* Type */}
-                  <div><TypeBadge type={intervention.type} /></div>
-
-                  {/* Statut */}
-                  <div><StatutBadge statut={intervention.statut} /></div>
-
-                  {/* Rapport */}
-                  <div>
-                    {rapport ? (
-                      <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-opacity hover:opacity-80"
-                        style={{ background: "#1B3A2D", color: "white" }}
-                        onClick={() => alert("PDF disponible — génération en cours de configuration Supabase Storage.")}
-                      >
-                        <Download size={12} />
-                        PDF
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "#9CA3AF" }}>
-                        <FileText size={12} />
-                        {intervention.statut === "planifie" ? "À venir" : "–"}
-                      </span>
-                    )}
-                  </div>
+                  <span style={{ fontSize: "12px", color: "#6B7280" }}>Thomas Lebrun</span>
                 </div>
-              );
-            })}
+
+                {/* Type */}
+                <TypeBadge type={intervention.type} />
+
+                {/* Statut */}
+                <StatutBadge statut={intervention.statut} />
+
+                {/* Actions */}
+                <div>
+                  {intervention.statut === "realise" ? (
+                    <button
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "5px",
+                        padding: "6px 12px", borderRadius: "8px",
+                        background: "#1B3A2D", color: "white",
+                        fontSize: "11px", fontWeight: 600,
+                        border: "none", cursor: "pointer",
+                      }}
+                    >
+                      <Download size={11} /> PDF
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#9CA3AF" }}>—</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "16px", textAlign: "center" }}>
+        {allInterventions.length} intervention{allInterventions.length > 1 ? "s" : ""} au total
+      </p>
     </div>
-  );
+  )
 }

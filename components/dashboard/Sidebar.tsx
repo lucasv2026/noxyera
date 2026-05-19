@@ -2,16 +2,18 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { LayoutDashboard, Wrench, FileText, CreditCard, LogOut, User } from "lucide-react"
+import { LayoutDashboard, Wrench, FileText, CreditCard, LogOut, User, Settings } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { createClient } from "@/lib/supabase/client"
 import type { Profile } from "@/lib/types/dashboard"
 
 const NAV_ITEMS = [
-  { href: "/dashboard",               icon: LayoutDashboard, label: "Mes sites" },
+  { href: "/dashboard",               icon: LayoutDashboard, label: "Tableau de bord" },
+  { href: "/dashboard/sites",         icon: LayoutDashboard, label: "Mes sites" },
   { href: "/dashboard/interventions", icon: Wrench,          label: "Interventions" },
   { href: "/dashboard/rapports",      icon: FileText,        label: "Rapports" },
-  { href: "/dashboard/mon-compte",    icon: CreditCard,      label: "Mon contrat" },
+  { href: "/dashboard/facturation",   icon: CreditCard,      label: "Facturation" },
+  { href: "/dashboard/parametres",    icon: Settings,        label: "Paramètres" },
 ]
 
 interface SidebarProps {

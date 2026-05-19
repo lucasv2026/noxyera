@@ -1,109 +1,181 @@
-import { MapPin, Building2, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
-import { DEMO_SITES } from "@/lib/demo-data";
+import { Building2 } from "lucide-react"
+import { SUPABASE_DEMO_PROFILE, SUPABASE_DEMO_SITES } from "@/lib/demo-data"
+import type { Profile, Site } from "@/lib/types/dashboard"
+import Link from "next/link"
 
-function StatutBadge({ statut }: { statut: "conforme" | "a_planifier" | "urgent" }) {
-  if (statut === "conforme") return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-      style={{ background: "#D1FAE5", color: "#065F46" }}>
-      <CheckCircle2 size={10} /> Conforme
-    </span>
-  );
-  if (statut === "a_planifier") return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-      style={{ background: "#FEF3C7", color: "#92400E" }}>
-      <Clock size={10} /> À planifier
-    </span>
-  );
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-      style={{ background: "#FEE2E2", color: "#991B1B" }}>
-      <AlertTriangle size={10} /> Urgent
-    </span>
-  );
+interface SitesData {
+  profile: Profile
+  sites: Site[]
 }
 
-export default function DashboardSitesPage() {
+async function getData(): Promise<SitesData> {
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+
+  if (isDemoMode) {
+    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+  }
+
+  try {
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (!profile) return { profile: SUPABASE_DEMO_PROFILE, sites: [] }
+
+    const { data: sites } = await supabase
+      .from("sites")
+      .select("*, contracts(*), interventions(*)")
+      .eq("client_id", profile.id)
+      .eq("statut", "actif")
+
+    return { profile: profile as Profile, sites: (sites as Site[]) ?? [] }
+  } catch {
+    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+  }
+}
+
+function daysFromNow(iso: string) {
+  const diff = new Date(iso).getTime() - Date.now()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+function SiteStatusBadge({ contract }: { contract?: { date_fin: string; statut: string } | null }) {
+  if (!contract) return (
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#F3F4F6", color: "#6B7280" }}>
+      Sans contrat
+    </span>
+  )
+  if (contract.statut === "expire") return (
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#FEE2E2", color: "#991B1B" }}>
+      ● Expiré
+    </span>
+  )
+  if (daysFromNow(contract.date_fin) < 30) return (
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#FEF3C7", color: "#92400E" }}>
+      ● Bientôt dû
+    </span>
+  )
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "#1A1A1A" }}>Sites</h1>
-        <p className="text-sm mt-1" style={{ color: "#6B7280" }}>
-          {DEMO_SITES.length} sites actifs dans votre portefeuille
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#D1FAE5", color: "#065F46" }}>
+      ● Actif
+    </span>
+  )
+}
+
+export default async function SitesPage() {
+  const { sites } = await getData()
+
+  return (
+    <div style={{ padding: "32px 32px 64px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "28px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "var(--font-display), serif" }}>
+          Mes sites
+        </h1>
+        <p style={{ fontSize: "14px", color: "#6B7280", marginTop: "6px", marginBottom: 0 }}>
+          {sites.length} site{sites.length > 1 ? "s" : ""} sous contrat Noxyera
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {DEMO_SITES.map((site) => (
-          <div
-            key={site.id}
-            className="rounded-2xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-            style={{ border: "1px solid rgba(0,0,0,0.06)" }}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: "#F5F0E8" }}
+      {sites.length === 0 ? (
+        <div style={{ background: "white", borderRadius: "16px", padding: "64px 32px", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+          <Building2 size={40} style={{ color: "#E5E7EB", marginBottom: "16px" }} />
+          <p style={{ fontSize: "16px", color: "#9CA3AF", margin: 0, fontWeight: 600 }}>Aucun site actif</p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+          {sites.map((site) => {
+            const contract = site.contracts?.[0] ?? null
+            const nextInterv = (site.interventions ?? [])
+              .filter((i) => i.statut === "planifie")
+              .sort((a, b) => a.date_prevue.localeCompare(b.date_prevue))[0]
+
+            return (
+              <div
+                key={site.id}
+                style={{
+                  background: "white",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                  border: "1px solid rgba(0,0,0,0.05)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {/* Top */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                  <div>
+                    <p style={{ fontSize: "16px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 4px" }}>{site.nom}</p>
+                    <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>{site.ville}</p>
+                  </div>
+                  <SiteStatusBadge contract={contract} />
+                </div>
+
+                {/* Details */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0 0 2px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Secteur</p>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#374151", margin: 0 }}>{site.secteur}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0 0 2px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Superficie</p>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#374151", margin: 0 }}>{site.superficie} m²</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0 0 2px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Formule</p>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#1B3A2D", margin: 0 }}>
+                      {contract?.formule === "serenite" ? "Sérénité" : "Essentiel"}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0 0 2px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Prix / an</p>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#374151", margin: 0 }}>
+                      {contract ? `${contract.prix_annuel.toLocaleString("fr-FR")} €` : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Prochain passage */}
+                {nextInterv && (
+                  <div style={{ padding: "10px 14px", borderRadius: "10px", background: "#F5F0E8", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "12px", color: "#1B3A2D", fontWeight: 600 }}>
+                      Prochain passage : {new Date(nextInterv.date_prevue).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                    </span>
+                  </div>
+                )}
+
+                {/* CTA */}
+                <Link
+                  href={`/dashboard/sites/${site.id}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    background: "#1B3A2D",
+                    color: "white",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
                 >
-                  <Building2 size={16} style={{ color: "#1B3A2D" }} />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: "#1A1A1A" }}>
-                    {site.nom}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: "#6B7280" }}>
-                    {site.secteur}
-                  </p>
-                </div>
+                  Voir détail →
+                </Link>
               </div>
-              <StatutBadge statut={site.statut} />
-            </div>
-
-            {/* Details */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm" style={{ color: "#6B7280" }}>
-                <MapPin size={13} />
-                <span className="truncate">{site.adresse}, {site.ville}</span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm pt-3 border-t" style={{ borderColor: "#F3F4F6" }}>
-                <div>
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Superficie</p>
-                  <p className="font-semibold text-sm" style={{ color: "#1A1A1A" }}>
-                    {site.superficie.toLocaleString("fr-FR")} m²
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Score HACCP</p>
-                  <p className="font-semibold text-sm" style={{ color: site.haccpScore >= 90 ? "#059669" : site.haccpScore >= 75 ? "#D97706" : "#DC2626" }}>
-                    {site.haccpScore}%
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Formule</p>
-                  <p className="font-semibold text-sm capitalize" style={{ color: "#1B3A2D" }}>
-                    {site.formule === "serenite" ? "Sérénité" : "Essentiel"}
-                  </p>
-                </div>
-              </div>
-
-              {site.prochainPassage && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mt-1"
-                  style={{ background: "#F5F0E8", color: "#1B3A2D" }}
-                >
-                  <Clock size={12} />
-                  Prochain passage :{" "}
-                  {new Date(site.prochainPassage).toLocaleDateString("fr-FR", {
-                    day: "numeric", month: "long", year: "numeric"
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
-  );
+  )
 }
