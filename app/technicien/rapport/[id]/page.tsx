@@ -1,478 +1,359 @@
-"use client";
+"use client"
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  ArrowLeft, ArrowRight, CheckSquare, Square, ShieldCheck,
-  FileText, Loader2, Camera, Plus, Download, X, Trash2,
-} from "lucide-react";
+import { useState, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Camera, X, Lock, CheckCircle, Loader2 } from "lucide-react"
+import dynamic from "next/dynamic"
+import type SignatureCanvas from "react-signature-canvas"
+import { SUPABASE_DEMO_MISSIONS_TODAY, SUPABASE_DEMO_TECH_PROFILE } from "@/lib/demo-data"
 
-// ── Zones (spec: Cuisine · Cave · Extérieurs · Réserves · Vestiaires · Poubelles · Toiture) ──
+const SignaturePad = dynamic(
+  () => import("@/components/technicien/SignaturePad").then((m) => m.SignaturePad),
+  { ssr: false }
+)
+
+// ─── Zones ────────────────────────────────────────────────────────────────────
 const ZONES = [
-  "Cuisine / Zone préparation",
-  "Cave / Sous-sol",
-  "Extérieurs / Cour",
-  "Réserves / Stockage",
-  "Vestiaires / Sanitaires",
-  "Poubelles / Local déchet",
-  "Toiture / Combles",
-  "Salle / Accueil",
-  "Locaux techniques",
-];
+  { id: "cuisine",     label: "Cuisine",              icon: "🍳" },
+  { id: "cave",        label: "Cave / Sous-sol",       icon: "🏚️" },
+  { id: "reserves",    label: "Réserves",              icon: "📦" },
+  { id: "exterieurs",  label: "Extérieurs / Terrasse", icon: "🌿" },
+  { id: "vestiaires",  label: "Vestiaires",            icon: "👔" },
+  { id: "poubelles",   label: "Local poubelles",       icon: "🗑️" },
+  { id: "toiture",     label: "Toiture / Combles",     icon: "🏠" },
+  { id: "salle",       label: "Salle de restauration", icon: "🪑" },
+]
 
-interface ProduitLigne {
-  nom: string;
-  numeroAutorisation: string;
-  quantite: string;
-  unite: string;
+interface Produit {
+  nom: string
+  autorisation: string
+  quantite: string
+  unite: "mL" | "L" | "g" | "kg" | "pièces" | "pièges"
 }
 
-const STEP_LABELS = [
-  "Zones traitées",
-  "Produits utilisés",
-  "Observations",
-  "Photos",
-  "Récapitulatif",
-];
-
-function StepIndicator({ current, total }: { current: number; total: number }) {
+// ─── Barre de progression ──────────────────────────────────────────────────────
+function StepBar({ step, total }: { step: number; total: number }) {
   return (
-    <div className="flex items-center gap-0">
-      {Array.from({ length: total }, (_, i) => (
-        <div key={i} className="flex items-center">
+    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "28px" }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", flex: i < total - 1 ? 1 : "unset" }}>
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all"
             style={{
-              background: i < current ? "#1B3A2D" : i === current ? "#F26522" : "#E5E7EB",
-              color: i <= current ? "white" : "#9CA3AF",
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "12px",
+              fontWeight: 700,
+              background: i < step ? "#1B3A2D" : i === step ? "#F26522" : "white",
+              color: i <= step ? "white" : "#9CA3AF",
+              border: i > step ? "1.5px solid #E5E7EB" : "none",
+              flexShrink: 0,
             }}
           >
-            {i < current ? "✓" : i + 1}
+            {i < step ? <CheckCircle size={14} /> : i + 1}
           </div>
           {i < total - 1 && (
-            <div
-              className="h-0.5 w-6 sm:w-10 transition-all"
-              style={{ background: i < current ? "#1B3A2D" : "#E5E7EB" }}
-            />
+            <div style={{ flex: 1, height: "2px", background: i < step ? "#1B3A2D" : "#E5E7EB", borderRadius: "1px" }} />
           )}
         </div>
       ))}
+      <span style={{ marginLeft: "8px", fontSize: "12px", color: "#6B7280", whiteSpace: "nowrap" }}>
+        Étape {step + 1}/{total}
+      </span>
     </div>
-  );
+  )
 }
 
-export default function RapportInterventionPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [step, setStep] = useState(0);
+// ─── Composant principal ──────────────────────────────────────────────────────
+export default function RapportPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const sigRef = useRef<any>(null)
 
-  // Step 1 — Zones
-  const [zonesTraitees, setZonesTraitees] = useState<string[]>([]);
+  const [step, setStep] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState("")
 
-  // Step 2 — Produits
-  const [produits, setProduits] = useState<ProduitLigne[]>([
-    { nom: "", numeroAutorisation: "", quantite: "", unite: "g" },
-  ]);
+  // État formulaire
+  const [selectedZones, setSelectedZones] = useState<string[]>([])
+  const [produits, setProduits] = useState<Produit[]>([
+    { nom: "", autorisation: "", quantite: "", unite: "mL" },
+  ])
+  const [observations, setObservations] = useState("")
+  const [presenceActive, setPresenceActive] = useState(false)
+  const [recommandationSuivi, setRecommandationSuivi] = useState(false)
+  const [photos, setPhotos] = useState<{ file: File; url: string; uploaded?: string }[]>([])
 
-  // Step 3 — Observations
-  const [notes, setNotes] = useState("");
-  const [haccpConforme, setHaccpConforme] = useState(true);
+  // Récupère les infos de la mission (démo ou Supabase)
+  const demoMission = SUPABASE_DEMO_MISSIONS_TODAY.find((m) => m.id === params.id)
+    ?? SUPABASE_DEMO_MISSIONS_TODAY[0]
 
-  // Step 4 — Photos
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Step 5 — Signature + generate
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawingRef = useRef(false);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [done, setDone] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-
-  // Init canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }, [step]);
-
-  function getCanvasPos(canvas: HTMLCanvasElement, e: MouseEvent | Touch) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) * (canvas.width / rect.width),
-      y: (e.clientY - rect.top) * (canvas.height / rect.height),
-    };
+  // ── Zones ──────────────────────────────────────────────────────────────────
+  function toggleZone(id: string) {
+    setSelectedZones((prev) =>
+      prev.includes(id) ? prev.filter((z) => z !== id) : [...prev, id]
+    )
   }
 
-  const startDrawing = useCallback((e: MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    isDrawingRef.current = true;
-    lastPosRef.current = getCanvasPos(canvas, e);
-  }, []);
-
-  const draw = useCallback((e: MouseEvent) => {
-    if (!isDrawingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx || !lastPosRef.current) return;
-    const pos = getCanvasPos(canvas, e);
-    ctx.beginPath();
-    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = "#1B3A2D";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    lastPosRef.current = pos;
-  }, []);
-
-  const stopDrawing = useCallback(() => {
-    isDrawingRef.current = false;
-    lastPosRef.current = null;
-  }, []);
-
-  const touchStart = useCallback((e: TouchEvent) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    isDrawingRef.current = true;
-    lastPosRef.current = getCanvasPos(canvas, e.touches[0]);
-  }, []);
-
-  const touchMove = useCallback((e: TouchEvent) => {
-    e.preventDefault();
-    if (!isDrawingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx || !lastPosRef.current) return;
-    const pos = getCanvasPos(canvas, e.touches[0]);
-    ctx.beginPath();
-    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.strokeStyle = "#1B3A2D";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    lastPosRef.current = pos;
-  }, []);
-
-  useEffect(() => {
-    if (step !== 4) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.addEventListener("mousedown", startDrawing);
-    canvas.addEventListener("mousemove", draw);
-    canvas.addEventListener("mouseup", stopDrawing);
-    canvas.addEventListener("mouseleave", stopDrawing);
-    canvas.addEventListener("touchstart", touchStart, { passive: false });
-    canvas.addEventListener("touchmove", touchMove, { passive: false });
-    canvas.addEventListener("touchend", stopDrawing);
-    return () => {
-      canvas.removeEventListener("mousedown", startDrawing);
-      canvas.removeEventListener("mousemove", draw);
-      canvas.removeEventListener("mouseup", stopDrawing);
-      canvas.removeEventListener("mouseleave", stopDrawing);
-      canvas.removeEventListener("touchstart", touchStart);
-      canvas.removeEventListener("touchmove", touchMove);
-      canvas.removeEventListener("touchend", stopDrawing);
-    };
-  }, [step, startDrawing, draw, stopDrawing, touchStart, touchMove]);
-
-  function clearSignature() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
-  // ── Zone helpers ───────────────────────────────────────────────────────────
-  function toggleZone(zone: string) {
-    setZonesTraitees((prev) =>
-      prev.includes(zone) ? prev.filter((z) => z !== zone) : [...prev, zone]
-    );
-  }
-
-  // ── Produit helpers ────────────────────────────────────────────────────────
-  function updateProduit(index: number, field: keyof ProduitLigne, value: string) {
-    setProduits((prev) => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
-  }
-
+  // ── Produits ───────────────────────────────────────────────────────────────
   function addProduit() {
-    setProduits((prev) => [...prev, { nom: "", numeroAutorisation: "", quantite: "", unite: "g" }]);
+    setProduits((p) => [...p, { nom: "", autorisation: "", quantite: "", unite: "mL" }])
+  }
+  function removeProduit(i: number) {
+    setProduits((p) => p.filter((_, idx) => idx !== i))
+  }
+  function updateProduit(i: number, field: keyof Produit, value: string) {
+    setProduits((p) => p.map((prod, idx) => idx === i ? { ...prod, [field]: value } : prod))
   }
 
-  function removeProduit(index: number) {
-    setProduits((prev) => prev.filter((_, i) => i !== index));
+  // ── Photos ─────────────────────────────────────────────────────────────────
+  function handlePhotoAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const remaining = 8 - photos.length
+    files.slice(0, remaining).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setPhotos((p) => [...p, { file, url }])
+    })
+    e.target.value = ""
+  }
+  function removePhoto(i: number) {
+    setPhotos((p) => p.filter((_, idx) => idx !== i))
   }
 
-  // ── Photo helpers ──────────────────────────────────────────────────────────
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFiles((prev) => [...prev, file]);
-    const reader = new FileReader();
-    reader.onload = (ev) => setPhotoPreviews((prev) => [...prev, ev.target?.result as string]);
-    reader.readAsDataURL(file);
-    e.target.value = "";
+  // ── Validation par étape ───────────────────────────────────────────────────
+  function canProceed(): boolean {
+    if (step === 0) return selectedZones.length > 0
+    if (step === 1) return produits.length > 0 && produits.every((p) => p.nom.trim() !== "")
+    if (step === 3) return photos.length > 0
+    return true
   }
 
-  function removePhoto(index: number) {
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  // ── Navigation ─────────────────────────────────────────────────────────────
-  function canGoNext(): boolean {
-    if (step === 0) return zonesTraitees.length > 0;
-    return true;
-  }
-
-  // ── PDF generation ─────────────────────────────────────────────────────────
+  // ── Génération PDF ─────────────────────────────────────────────────────────
   async function handleGenerate() {
-    setGenerating(true);
-    const signature = canvasRef.current?.toDataURL("image/png") ?? null;
-
-    const produitsUtilises = produits
-      .filter((p) => p.nom.trim())
-      .map((p) => `${p.nom}${p.numeroAutorisation ? ` (Auth. ${p.numeroAutorisation})` : ""}${p.quantite ? ` — ${p.quantite}${p.unite}` : ""}`);
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      setError("Veuillez signer le rapport avant de le générer.")
+      return
+    }
+    setError("")
+    setLoading(true)
 
     try {
+      const signatureDataUrl = sigRef.current.toDataURL("image/png")
+
+      // Upload photos vers Supabase Storage
+      const photoUrls: string[] = []
+      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+
+      if (!isDemoMode) {
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
+        for (const p of photos) {
+          const { data: uploadData } = await supabase.storage
+            .from("rapports-photos")
+            .upload(`${params.id}/${Date.now()}_${p.file.name}`, p.file)
+          if (uploadData) {
+            const { data: urlData } = supabase.storage
+              .from("rapports-photos")
+              .getPublicUrl(uploadData.path)
+            photoUrls.push(urlData.publicUrl)
+          }
+        }
+      } else {
+        photoUrls.push(...photos.map((p) => p.url))
+      }
+
+      // Appel API génération PDF
       const res = await fetch("/api/rapport/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: params.id,
           interventionId: params.id,
-          siteNom: "Yooma Urban Lodge — Bar & Lobby",
-          adresse: "22 Rue Linois, Paris 15e",
-          technicienNom: "Jean-Marc Deschamps",
-          technicienCertif: "Certibiocide n°14521",
-          dateIntervention: new Date().toISOString(),
-          type: "preventif",
-          zonesTraitees,
-          produitsUtilises: produitsUtilises.length > 0 ? produitsUtilises : ["Aucun produit biocide utilisé"],
-          notes,
-          haccpConforme,
-          signature,
+          technicienId: SUPABASE_DEMO_TECH_PROFILE.id,
+          zonesTraitees: selectedZones.map((id) => ZONES.find((z) => z.id === id)?.label ?? id),
+          produitsUtilises: produits.map((p) => `${p.nom} — AMM ${p.autorisation} — ${p.quantite} ${p.unite}`),
+          observations,
+          presenceActive,
+          recommandationSuivi,
+          photosUrl: photoUrls,
+          signatureDataUrl,
+          siteName: demoMission.sites?.nom ?? "—",
+          siteAdresse: `${demoMission.sites?.adresse}, ${demoMission.sites?.ville} ${demoMission.sites?.code_postal}`,
+          secteur: demoMission.sites?.secteur ?? "—",
+          type: presenceActive ? "curatif" : demoMission.type,
+          formule: demoMission.contracts?.formule ?? "essentiel",
+          frequence: demoMission.contracts?.frequence ?? 4,
+          technicienNom: `${SUPABASE_DEMO_TECH_PROFILE.prenom} ${SUPABASE_DEMO_TECH_PROFILE.nom}`,
+          datePrevue: demoMission.date_prevue,
         }),
-      });
+      })
 
-      if (res.ok) {
-        const result = await res.json();
-        setPdfUrl(result.pdfUrl ?? null);
-      }
-    } catch {
-      setPdfUrl(null);
+      if (!res.ok) throw new Error("Erreur génération PDF")
+
+      setSuccess(true)
+      setTimeout(() => router.push("/technicien/missions?success=1"), 2000)
+    } catch (e) {
+      setError("Une erreur est survenue. Réessayez.")
+    } finally {
+      setLoading(false)
     }
-
-    setGenerating(false);
-    setDone(true);
   }
 
-  // ── Done screen ────────────────────────────────────────────────────────────
-  if (done) {
+  // ─── Rendu étapes ─────────────────────────────────────────────────────────
+  const TOTAL_STEPS = 5
+
+  if (success) {
     return (
-      <div className="max-w-lg mx-auto p-6 flex flex-col items-center justify-center min-h-[70vh] text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5" style={{ background: "#D1FAE5" }}>
-          <ShieldCheck size={32} style={{ color: "#059669" }} />
-        </div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: "#1A1A1A" }}>Rapport HACCP généré !</h2>
-        <p className="text-sm mb-6" style={{ color: "#6B7280" }}>
-          Le rapport a été signé numériquement et archivé dans Supabase Storage.
-          Une notification email a été envoyée au client.
+      <div style={{ maxWidth: "600px", margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
+        <div style={{ fontSize: "56px", marginBottom: "16px" }}>✅</div>
+        <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 8px" }}>
+          Rapport généré avec succès !
+        </h2>
+        <p style={{ color: "#6B7280", fontSize: "14px" }}>
+          Le PDF HACCP a été transmis au client. Redirection…
         </p>
-        {pdfUrl && (
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 mb-4"
-            style={{ background: "#1B3A2D" }}
-          >
-            <Download size={15} />
-            Télécharger le PDF
-          </a>
-        )}
-        <button
-          onClick={() => router.push("/technicien/missions")}
-          className="text-sm underline"
-          style={{ color: "#6B7280" }}
-        >
-          Retour aux missions
-        </button>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3">
-        {step === 0 ? (
-          <Link
-            href="/technicien/missions"
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "white", border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            <ArrowLeft size={16} style={{ color: "#1B3A2D" }} />
-          </Link>
-        ) : (
-          <button
-            onClick={() => setStep((s) => s - 1)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "white", border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            <ArrowLeft size={16} style={{ color: "#1B3A2D" }} />
-          </button>
-        )}
-        <div>
-          <h1 className="text-lg font-bold" style={{ color: "#1A1A1A" }}>Saisie rapport</h1>
-          <p className="text-xs" style={{ color: "#6B7280" }}>
-            Mission #{params.id} · Étape {step + 1} sur {STEP_LABELS.length} — {STEP_LABELS[step]}
-          </p>
-        </div>
+    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "28px 20px 80px" }}>
+      {/* Titre + site */}
+      <div style={{ marginBottom: "8px" }}>
+        <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Rapport d&apos;intervention HACCP
+        </p>
+        <h1 style={{ fontSize: "20px", fontWeight: 700, color: "#1B3A2D", margin: 0 }}>
+          {demoMission.sites?.nom ?? "—"}
+        </h1>
+        <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0" }}>
+          {demoMission.sites?.adresse}, {demoMission.sites?.ville}
+        </p>
       </div>
 
-      {/* ── Step indicator ──────────────────────────────────────────────── */}
-      <div className="flex justify-center">
-        <StepIndicator current={step} total={STEP_LABELS.length} />
-      </div>
+      <div style={{ height: "1px", background: "#E5E7EB", margin: "16px 0 24px" }} />
 
-      {/* ── Step 0 : Zones traitées ─────────────────────────────────────── */}
+      <StepBar step={step} total={TOTAL_STEPS} />
+
+      {/* ── Étape 0 : Zones ── */}
       {step === 0 && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-          <h2 className="font-semibold text-sm mb-1" style={{ color: "#1A1A1A" }}>
-            Zones traitées <span style={{ color: "#DC2626" }}>*</span>
+        <div>
+          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>
+            Zones traitées
           </h2>
-          <p className="text-xs mb-3" style={{ color: "#6B7280" }}>Sélectionnez toutes les zones où une intervention a été réalisée.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {ZONES.map((zone) => {
-              const selected = zonesTraitees.includes(zone);
+          <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 18px" }}>
+            Sélectionnez toutes les zones inspectées (min. 1)
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {ZONES.map((z) => {
+              const selected = selectedZones.includes(z.id)
               return (
                 <button
-                  key={zone}
-                  onClick={() => toggleZone(zone)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-left transition-all"
+                  key={z.id}
+                  onClick={() => toggleZone(z.id)}
                   style={{
-                    background: selected ? "#D1FAE5" : "#F9FAFB",
-                    border: `1.5px solid ${selected ? "#A7F3D0" : "#E5E7EB"}`,
-                    color: selected ? "#065F46" : "#374151",
+                    padding: "14px 12px",
+                    borderRadius: "12px",
+                    border: selected ? "2px solid #1B3A2D" : "1.5px solid #E5E7EB",
+                    background: selected ? "#F0FDF4" : "white",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
                   }}
                 >
-                  {selected ? <CheckSquare size={15} style={{ color: "#059669" }} /> : <Square size={15} style={{ color: "#9CA3AF" }} />}
-                  {zone}
+                  <span style={{ fontSize: "20px" }}>{z.icon}</span>
+                  <span style={{ fontSize: "13px", fontWeight: selected ? 700 : 400, color: selected ? "#1B3A2D" : "#374151" }}>
+                    {z.label}
+                  </span>
                 </button>
-              );
+              )
             })}
           </div>
-          {zonesTraitees.length === 0 && (
-            <p className="text-xs mt-2" style={{ color: "#DC2626" }}>Sélectionnez au moins une zone pour continuer.</p>
-          )}
-          {zonesTraitees.length > 0 && (
-            <p className="text-xs mt-2 font-medium" style={{ color: "#059669" }}>
-              {zonesTraitees.length} zone{zonesTraitees.length > 1 ? "s" : ""} sélectionnée{zonesTraitees.length > 1 ? "s" : ""}
-            </p>
-          )}
         </div>
       )}
 
-      {/* ── Step 1 : Produits utilisés ──────────────────────────────────── */}
+      {/* ── Étape 1 : Produits ── */}
       {step === 1 && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-          <h2 className="font-semibold text-sm mb-1" style={{ color: "#1A1A1A" }}>Produits utilisés</h2>
-          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
-            Renseignez le nom, le numéro d&apos;autorisation biocide et la quantité de chaque produit.
+        <div>
+          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>
+            Produits utilisés
+          </h2>
+          <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 18px" }}>
+            Renseignez chaque produit biocide appliqué
           </p>
-
-          <div className="space-y-4">
-            {produits.map((produit, index) => (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {produits.map((prod, i) => (
               <div
-                key={index}
-                className="rounded-xl p-4 relative"
-                style={{ background: "#F9FAFB", border: "1.5px solid #E5E7EB" }}
+                key={i}
+                style={{
+                  background: "white",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+                  position: "relative",
+                }}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold" style={{ color: "#1B3A2D" }}>
-                    Produit {index + 1}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase" }}>
+                    Produit {i + 1}
                   </span>
                   {produits.length > 1 && (
-                    <button
-                      onClick={() => removeProduit(index)}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center"
-                      style={{ background: "#FEE2E2" }}
-                    >
-                      <Trash2 size={12} style={{ color: "#DC2626" }} />
+                    <button onClick={() => removeProduit(i)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}>
+                      <Trash2 size={14} style={{ color: "#EF4444" }} />
                     </button>
                   )}
                 </div>
-
-                <div className="space-y-2.5">
-                  <div>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "#6B7280" }}>
-                      Nom du produit <span style={{ color: "#DC2626" }}>*</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: "4px" }}>
+                      Nom du produit *
                     </label>
                     <input
-                      type="text"
-                      placeholder="ex: Raticide anticoagulant Ditrac AG"
-                      value={produit.nom}
-                      onChange={(e) => updateProduit(index, "nom", e.target.value)}
-                      className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                      style={{ border: "1.5px solid #E5E7EB", background: "white", color: "#1A1A1A" }}
+                      value={prod.nom}
+                      onChange={(e) => updateProduit(i, "nom", e.target.value)}
+                      placeholder="ex: K-Othrine SC 7.5"
+                      style={inputStyle}
                     />
                   </div>
-
                   <div>
-                    <label className="text-xs font-medium block mb-1" style={{ color: "#6B7280" }}>
-                      N° autorisation biocide (AMM)
+                    <label style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: "4px" }}>
+                      N° autorisation biocide
                     </label>
                     <input
-                      type="text"
-                      placeholder="ex: FR-2020-0023456"
-                      value={produit.numeroAutorisation}
-                      onChange={(e) => updateProduit(index, "numeroAutorisation", e.target.value)}
-                      className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                      style={{ border: "1.5px solid #E5E7EB", background: "white", color: "#1A1A1A" }}
+                      value={prod.autorisation}
+                      onChange={(e) => updateProduit(i, "autorisation", e.target.value)}
+                      placeholder="AMM-XXXXX"
+                      style={inputStyle}
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs font-medium block mb-1" style={{ color: "#6B7280" }}>
-                        Quantité utilisée
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: "4px" }}>
+                        Quantité
                       </label>
                       <input
-                        type="text"
-                        placeholder="ex: 250"
-                        value={produit.quantite}
-                        onChange={(e) => updateProduit(index, "quantite", e.target.value)}
-                        className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                        style={{ border: "1.5px solid #E5E7EB", background: "white", color: "#1A1A1A" }}
+                        value={prod.quantite}
+                        onChange={(e) => updateProduit(i, "quantite", e.target.value)}
+                        placeholder="50"
+                        style={inputStyle}
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium block mb-1" style={{ color: "#6B7280" }}>Unité</label>
+                      <label style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", display: "block", marginBottom: "4px" }}>
+                        Unité
+                      </label>
                       <select
-                        value={produit.unite}
-                        onChange={(e) => updateProduit(index, "unite", e.target.value)}
-                        className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                        style={{ border: "1.5px solid #E5E7EB", background: "white", color: "#1A1A1A" }}
+                        value={prod.unite}
+                        onChange={(e) => updateProduit(i, "unite", e.target.value)}
+                        style={{ ...inputStyle, width: "80px" }}
                       >
-                        <option value="g">g</option>
-                        <option value="kg">kg</option>
-                        <option value="mL">mL</option>
-                        <option value="L">L</option>
-                        <option value="unités">unités</option>
-                        <option value="pièges">pièges</option>
+                        {["mL", "L", "g", "kg", "pièces", "pièges"].map((u) => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -480,239 +361,379 @@ export default function RapportInterventionPage({ params }: { params: { id: stri
               </div>
             ))}
           </div>
-
           <button
             onClick={addProduit}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            style={{ border: "1.5px dashed #D1D5DB", color: "#6B7280", background: "#F9FAFB" }}
+            style={{
+              marginTop: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              border: "1.5px dashed #D1D5DB",
+              background: "transparent",
+              color: "#6B7280",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              width: "100%",
+              justifyContent: "center",
+            }}
           >
-            <Plus size={15} />
+            <Plus size={14} />
             Ajouter un produit
           </button>
         </div>
       )}
 
-      {/* ── Step 2 : Observations ───────────────────────────────────────── */}
+      {/* ── Étape 2 : Observations ── */}
       {step === 2 && (
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <h2 className="font-semibold text-sm mb-1" style={{ color: "#1A1A1A" }}>Observations</h2>
-            <p className="text-xs mb-3" style={{ color: "#6B7280" }}>
-              Décrivez les observations, recommandations ou anomalies constatées.
-            </p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Traces de rongeurs détectées en zone stockage. Renouvellement des appâts effectué. Recommandation : jointures à refaire côté quai de livraison…"
-              rows={5}
-              className="w-full rounded-xl p-3 text-sm outline-none resize-none"
-              style={{ border: "1.5px solid #E5E7EB", background: "#F9FAFB", color: "#1A1A1A" }}
+        <div>
+          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>
+            Observations
+          </h2>
+          <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 18px" }}>
+            Décrivez vos constats sur site
+          </p>
+          <textarea
+            value={observations}
+            onChange={(e) => setObservations(e.target.value)}
+            rows={6}
+            placeholder="Décrivez vos observations : présence de nuisibles, points d'entrée identifiés, recommandations..."
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "10px",
+              border: "1.5px solid #E5E7EB",
+              fontSize: "14px",
+              color: "#1A1A1A",
+              background: "white",
+              resize: "vertical",
+              boxSizing: "border-box",
+              outline: "none",
+            }}
+          />
+          <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <Toggle
+              label="Présence active détectée"
+              sub="Le type d'intervention sera changé en Curatif"
+              value={presenceActive}
+              onChange={setPresenceActive}
+              accent
+            />
+            <Toggle
+              label="Recommandation de suivi sous 15 jours"
+              value={recommandationSuivi}
+              onChange={setRecommandationSuivi}
             />
           </div>
-
-          <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <h2 className="font-semibold text-sm mb-3" style={{ color: "#1A1A1A" }}>Conformité HACCP</h2>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setHaccpConforme(true)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: haccpConforme ? "#D1FAE5" : "#F9FAFB",
-                  border: `2px solid ${haccpConforme ? "#A7F3D0" : "#E5E7EB"}`,
-                  color: haccpConforme ? "#065F46" : "#6B7280",
-                }}
-              >
-                ✓ Site conforme
-              </button>
-              <button
-                onClick={() => setHaccpConforme(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: !haccpConforme ? "#FEE2E2" : "#F9FAFB",
-                  border: `2px solid ${!haccpConforme ? "#FECACA" : "#E5E7EB"}`,
-                  color: !haccpConforme ? "#991B1B" : "#6B7280",
-                }}
-              >
-                ✗ Non conforme
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* ── Step 3 : Photos ─────────────────────────────────────────────── */}
+      {/* ── Étape 3 : Photos ── */}
       {step === 3 && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-          <h2 className="font-semibold text-sm mb-1" style={{ color: "#1A1A1A" }}>Photos d&apos;intervention</h2>
-          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
-            Minimum 3 photos recommandées pour la conformité DDPP. Elles seront intégrées au rapport.
+        <div>
+          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>
+            Photos
+          </h2>
+          <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 18px" }}>
+            Minimum 1 photo · maximum 8 · preuves horodatées
           </p>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handlePhotoChange}
-          />
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "16px",
+              borderRadius: "12px",
+              border: "2px dashed #D1D5DB",
+              background: "white",
+              cursor: "pointer",
+              marginBottom: "16px",
+            }}
+          >
+            <Camera size={18} style={{ color: "#9CA3AF" }} />
+            <span style={{ fontSize: "14px", color: "#6B7280", fontWeight: 500 }}>
+              Ajouter des photos ({photos.length}/8)
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              onChange={handlePhotoAdd}
+              style={{ display: "none" }}
+              disabled={photos.length >= 8}
+            />
+          </label>
 
-          <div className="grid grid-cols-3 gap-3">
-            {photoPreviews.map((preview, i) => (
-              <div key={i} className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "1" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                <button
-                  onClick={() => removePhoto(i)}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(0,0,0,0.6)" }}
-                >
-                  <X size={12} className="text-white" />
-                </button>
-                <div
-                  className="absolute bottom-1 left-1 text-xs px-1.5 py-0.5 rounded font-medium"
-                  style={{ background: "rgba(0,0,0,0.5)", color: "white" }}
-                >
-                  {i + 1}
+          {photos.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+              {photos.map((p, i) => (
+                <div key={i} style={{ position: "relative", borderRadius: "8px", overflow: "hidden", aspectRatio: "1" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    onClick={() => removePhoto(i)}
+                    style={{
+                      position: "absolute",
+                      top: "4px",
+                      right: "4px",
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: "rgba(0,0,0,0.6)",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <X size={11} style={{ color: "white" }} />
+                  </button>
                 </div>
-              </div>
-            ))}
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors hover:bg-gray-50"
-              style={{ borderColor: "#D1D5DB", aspectRatio: "1", color: "#9CA3AF" }}
-            >
-              <Camera size={20} className="mb-1" />
-              <span className="text-xs">Ajouter</span>
-            </button>
-          </div>
-
-          {photoPreviews.length < 3 && (
-            <p className="text-xs mt-3 flex items-center gap-1" style={{ color: "#D97706" }}>
-              <span>⚠</span>
-              {3 - photoPreviews.length} photo{3 - photoPreviews.length > 1 ? "s" : ""} manquante{3 - photoPreviews.length > 1 ? "s" : ""} (recommandé)
-            </p>
-          )}
-          {photoPreviews.length >= 3 && (
-            <p className="text-xs mt-3 font-medium" style={{ color: "#059669" }}>
-              ✓ {photoPreviews.length} photo{photoPreviews.length > 1 ? "s" : ""} ajoutée{photoPreviews.length > 1 ? "s" : ""}
-            </p>
+              ))}
+            </div>
           )}
         </div>
       )}
 
-      {/* ── Step 4 : Récapitulatif + Signature + Génération ─────────────── */}
+      {/* ── Étape 4 : Récapitulatif + Signature ── */}
       {step === 4 && (
-        <div className="space-y-4">
-          {/* Récapitulatif */}
-          <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <h2 className="font-semibold text-sm mb-3" style={{ color: "#1A1A1A" }}>Récapitulatif</h2>
+        <div>
+          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 18px" }}>
+            Récapitulatif & Signature
+          </h2>
 
-            <div className="space-y-2.5">
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Site</span>
-                <span className="text-xs" style={{ color: "#1A1A1A" }}>Yooma Urban Lodge — Bar & Lobby</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Technicien</span>
-                <span className="text-xs" style={{ color: "#1A1A1A" }}>Jean-Marc Deschamps — Certibiocide n°14521</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Date</span>
-                <span className="text-xs" style={{ color: "#1A1A1A" }}>
-                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Conformité</span>
-                <span className="text-xs font-medium" style={{ color: haccpConforme ? "#059669" : "#DC2626" }}>
-                  {haccpConforme ? "✓ Site conforme HACCP" : "✗ Non conforme"}
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Zones ({zonesTraitees.length})</span>
-                <span className="text-xs" style={{ color: "#1A1A1A" }}>{zonesTraitees.join(" · ")}</span>
-              </div>
-              {produits.filter((p) => p.nom).length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Produits</span>
-                  <span className="text-xs" style={{ color: "#1A1A1A" }}>
-                    {produits.filter((p) => p.nom).map((p) => p.nom).join(", ")}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-start gap-2">
-                <span className="text-xs font-semibold w-28 shrink-0" style={{ color: "#6B7280" }}>Photos</span>
-                <span className="text-xs" style={{ color: "#1A1A1A" }}>
-                  {photoPreviews.length > 0 ? `${photoPreviews.length} photo${photoPreviews.length > 1 ? "s" : ""} jointe${photoPreviews.length > 1 ? "s" : ""}` : "Aucune photo"}
-                </span>
-              </div>
-            </div>
+          {/* Recap */}
+          <div style={{ background: "white", borderRadius: "12px", padding: "16px", marginBottom: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.07)" }}>
+            <RecapRow label="Site" value={demoMission.sites?.nom ?? "—"} />
+            <RecapRow label="Adresse" value={`${demoMission.sites?.adresse}, ${demoMission.sites?.ville}`} />
+            <RecapRow label="Date" value={new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} />
+            <RecapRow label="Technicien" value={`${SUPABASE_DEMO_TECH_PROFILE.prenom} ${SUPABASE_DEMO_TECH_PROFILE.nom} — Certifié Certibiocide`} />
+            <RecapRow
+              label="Type"
+              value={presenceActive ? "Curatif (présence active)" : demoMission.type === "preventif" ? "Préventif" : demoMission.type}
+            />
+            <RecapRow label="Zones traitées" value={selectedZones.map((id) => ZONES.find((z) => z.id === id)?.label).join(", ") || "—"} />
+            <RecapRow label="Produits" value={`${produits.filter((p) => p.nom).length} produit(s)`} />
+            <RecapRow label="Photos" value={`${photos.length} photo(s) uploadée(s)`} />
+            {recommandationSuivi && (
+              <RecapRow label="Suivi" value="Recommandé sous 15 jours" highlight />
+            )}
           </div>
 
           {/* Signature */}
-          <div className="rounded-2xl bg-white p-5 shadow-sm" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-sm" style={{ color: "#1A1A1A" }}>Signature du technicien</h2>
-              <button
-                onClick={clearSignature}
-                className="text-xs px-3 py-1.5 rounded-lg font-medium"
-                style={{ color: "#6B7280", border: "1px solid #E5E7EB" }}
-              >
-                Effacer
-              </button>
-            </div>
-            <canvas
-              ref={canvasRef}
-              width={400}
-              height={140}
-              className="w-full rounded-xl touch-none"
-              style={{ border: "1.5px solid #E5E7EB", background: "#FFFFFF", cursor: "crosshair" }}
-            />
-            <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-              Signez avec votre doigt ou la souris
+          <div style={{ background: "white", borderRadius: "12px", padding: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.07)", marginBottom: "20px" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#374151", margin: "0 0 10px" }}>
+              Signez ici pour valider le rapport
             </p>
+            <div style={{ border: "1.5px solid #E5E7EB", borderRadius: "8px", overflow: "hidden", background: "#FAFAFA" }}>
+              <SignaturePad ref={sigRef} penColor="#1B3A2D" width={540} height={150} />
+            </div>
+            <button
+              onClick={() => sigRef.current?.clear()}
+              style={{
+                marginTop: "8px",
+                fontSize: "12px",
+                color: "#6B7280",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Effacer
+            </button>
           </div>
 
-          {/* Generate button */}
+          {error && (
+            <div style={{ padding: "10px 14px", borderRadius: "8px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: "13px", marginBottom: "12px" }}>
+              {error}
+            </div>
+          )}
+
+          {/* Bouton générer */}
           <button
             onClick={handleGenerate}
-            disabled={generating}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-semibold text-white transition-all disabled:opacity-60"
-            style={{ background: "#1B3A2D", boxShadow: "0 4px 14px rgba(27,58,45,0.25)" }}
+            disabled={loading}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              padding: "16px",
+              borderRadius: "12px",
+              border: "none",
+              background: loading ? "#9CA3AF" : "#F26522",
+              color: "white",
+              fontSize: "16px",
+              fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: loading ? "none" : "0 4px 14px rgba(242,101,34,0.4)",
+            }}
           >
-            {generating ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Génération du rapport HACCP…
-              </>
+            {loading ? (
+              <><Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> Génération en cours…</>
             ) : (
-              <>
-                <FileText size={16} />
-                Générer le rapport HACCP
-              </>
+              <><Lock size={16} /> Générer le rapport HACCP</>
             )}
           </button>
-
-          <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>
-            Le rapport sera signé numériquement, archivé et envoyé au client par email.
-          </p>
         </div>
       )}
 
-      {/* ── Navigation ─────────────────────────────────────────────────── */}
+      {/* ── Navigation ── */}
       {step < 4 && (
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px", gap: "12px" }}>
+          <button
+            onClick={() => step > 0 && setStep(step - 1)}
+            disabled={step === 0}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "1.5px solid #E5E7EB",
+              background: "white",
+              color: step === 0 ? "#D1D5DB" : "#374151",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: step === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            <ChevronLeft size={15} /> Retour
+          </button>
+          <button
+            onClick={() => canProceed() && setStep(step + 1)}
+            disabled={!canProceed()}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "none",
+              background: canProceed() ? "#1B3A2D" : "#E5E7EB",
+              color: canProceed() ? "white" : "#9CA3AF",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: canProceed() ? "pointer" : "not-allowed",
+            }}
+          >
+            Suivant <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
+      {step === 4 && (
         <button
-          onClick={() => setStep((s) => s + 1)}
-          disabled={!canGoNext()}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all disabled:opacity-40"
-          style={{ background: "#F26522" }}
+          onClick={() => setStep(3)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            border: "1.5px solid #E5E7EB",
+            background: "white",
+            color: "#374151",
+            fontSize: "14px",
+            fontWeight: 600,
+            cursor: "pointer",
+            marginTop: "12px",
+          }}
         >
-          Étape suivante : {STEP_LABELS[step + 1]}
-          <ArrowRight size={15} />
+          <ChevronLeft size={15} /> Retour
         </button>
       )}
     </div>
-  );
+  )
+}
+
+// ─── Sous-composants ───────────────────────────────────────────────────────────
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "9px 12px",
+  borderRadius: "8px",
+  border: "1.5px solid #E5E7EB",
+  fontSize: "13px",
+  color: "#1A1A1A",
+  background: "#F9FAFB",
+  outline: "none",
+  boxSizing: "border-box",
+}
+
+function Toggle({
+  label,
+  sub,
+  value,
+  onChange,
+  accent,
+}: {
+  label: string
+  sub?: string
+  value: boolean
+  onChange: (v: boolean) => void
+  accent?: boolean
+}) {
+  return (
+    <div
+      onClick={() => onChange(!value)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "14px 16px",
+        borderRadius: "10px",
+        background: value && accent ? "#FFF7F3" : "white",
+        border: value && accent ? "1.5px solid #F26522" : "1.5px solid #E5E7EB",
+        cursor: "pointer",
+        gap: "12px",
+      }}
+    >
+      <div>
+        <p style={{ fontSize: "14px", fontWeight: 600, color: "#1B3A2D", margin: 0 }}>{label}</p>
+        {sub && <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>{sub}</p>}
+      </div>
+      <div
+        style={{
+          width: "42px",
+          height: "24px",
+          borderRadius: "12px",
+          background: value ? (accent ? "#F26522" : "#1B3A2D") : "#E5E7EB",
+          position: "relative",
+          flexShrink: 0,
+          transition: "background 0.2s",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "3px",
+            left: value ? "21px" : "3px",
+            width: "18px",
+            height: "18px",
+            borderRadius: "50%",
+            background: "white",
+            transition: "left 0.2s",
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function RecapRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div style={{ display: "flex", gap: "12px", padding: "8px 0", borderBottom: "1px solid #F9FAFB" }}>
+      <span style={{ fontSize: "12px", color: "#9CA3AF", minWidth: "110px", flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: "13px", fontWeight: 500, color: highlight ? "#F26522" : "#374151" }}>{value}</span>
+    </div>
+  )
 }

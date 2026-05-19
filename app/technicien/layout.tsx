@@ -1,52 +1,42 @@
-import Link from "next/link";
-import { Shield, Calendar, History, LogOut } from "lucide-react";
+import { redirect } from "next/navigation"
+import { TechnicienHeader } from "@/components/technicien/TechnicienHeader"
+import type { Profile } from "@/lib/types/dashboard"
+import { SUPABASE_DEMO_TECH_PROFILE } from "@/lib/demo-data"
 
-export default function TechnicienLayout({ children }: { children: React.ReactNode }) {
+async function getTechProfile(): Promise<Profile | null> {
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+  if (isDemoMode) return SUPABASE_DEMO_TECH_PROFILE
+
+  try {
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (!profile || profile.role !== "technicien") return null
+    return profile as Profile
+  } catch {
+    return null
+  }
+}
+
+export default async function TechnicienLayout({ children }: { children: React.ReactNode }) {
+  const profile = await getTechProfile()
+
+  if (!profile) {
+    redirect("/espace-technicien")
+  }
+
   return (
-    <div className="min-h-screen" style={{ background: "#F5F0E8" }}>
-      {/* Top header */}
-      <header
-        className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 py-3.5"
-        style={{ background: "#1B3A2D", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#F26522" }}>
-            <Shield size={16} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="text-white font-bold tracking-widest text-sm">NOXYERA</p>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Espace Technicien</p>
-          </div>
-        </div>
-
-        <nav className="flex items-center gap-1">
-          <Link
-            href="/technicien/missions"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.8)" }}
-          >
-            <Calendar size={14} />
-            <span className="hidden sm:inline">Missions</span>
-          </Link>
-          <Link
-            href="/technicien/historique"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.8)" }}
-          >
-            <History size={14} />
-            <span className="hidden sm:inline">Historique</span>
-          </Link>
-          <Link
-            href="/espace-technicien"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            <LogOut size={14} />
-          </Link>
-        </nav>
-      </header>
-
+    <div style={{ minHeight: "100vh", background: "#F5F0E8" }}>
+      <TechnicienHeader profile={profile} />
       <main>{children}</main>
     </div>
-  );
+  )
 }

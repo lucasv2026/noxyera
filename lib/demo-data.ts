@@ -712,3 +712,158 @@ export const SUPABASE_DEMO_RAPPORTS: SbRapport[] = [
     },
   },
 ]
+
+// ─── Données démo technicien ──────────────────────────────────────────────────
+
+export const SUPABASE_DEMO_TECH_PROFILE: SbProfile = {
+  id: "tech-profile-id",
+  user_id: "tech-demo-uuid-001",
+  role: "technicien",
+  nom: "Lebrun",
+  prenom: "Thomas",
+  email: "tech@noxyera.com",
+  telephone: "06 12 34 56 78",
+  entreprise: null,
+}
+
+const TODAY_9H = new Date(new Date().setHours(9, 0, 0, 0)).toISOString()
+const TODAY_14H = new Date(new Date().setHours(14, 0, 0, 0)).toISOString()
+const IN_2_DAYS = new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString()
+const IN_4_DAYS = new Date(Date.now() + 4 * 24 * 3600 * 1000).toISOString()
+const IN_6_DAYS = new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString()
+
+export interface MissionWithSite {
+  id: string
+  site_id: string
+  technicien_id: string
+  contract_id: string | null
+  type: "preventif" | "curatif" | "urgence"
+  date_prevue: string
+  date_reelle: string | null
+  statut: "planifie" | "realise" | "annule"
+  notes: string | null
+  sites: {
+    id: string
+    nom: string
+    adresse: string
+    ville: string
+    code_postal: string
+    secteur: string
+    client_id: string
+  } | null
+  contracts: {
+    formule: "essentiel" | "serenite"
+    frequence: number
+  } | null
+}
+
+export const SUPABASE_DEMO_MISSIONS_TODAY: MissionWithSite[] = [
+  {
+    id: "m-today-1",
+    site_id: "ys1",
+    technicien_id: "tech-profile-id",
+    contract_id: "c1",
+    type: "preventif",
+    date_prevue: TODAY_9H,
+    date_reelle: null,
+    statut: "planifie",
+    notes: "Passage préventif trimestriel — accès cuisine + cave",
+    sites: {
+      id: "ys1",
+      nom: "Yooma Urban Lodge Paris 15e",
+      adresse: "173 Quai André Citroën",
+      ville: "Paris",
+      code_postal: "75015",
+      secteur: "hotel",
+      client_id: "demo-profile-id",
+    },
+    contracts: { formule: "serenite", frequence: 6 },
+  },
+  {
+    id: "m-today-2",
+    site_id: "ys2",
+    technicien_id: "tech-profile-id",
+    contract_id: "c2",
+    type: "curatif",
+    date_prevue: TODAY_14H,
+    date_reelle: null,
+    statut: "planifie",
+    notes: "Signalement cafards cuisine — traitement curatif",
+    sites: {
+      id: "ys2",
+      nom: "Brasserie Voltaire",
+      adresse: "12 Rue de la Roquette",
+      ville: "Paris",
+      code_postal: "75011",
+      secteur: "restaurant",
+      client_id: "demo-profile-id",
+    },
+    contracts: { formule: "essentiel", frequence: 4 },
+  },
+]
+
+export const SUPABASE_DEMO_MISSIONS_WEEK: MissionWithSite[] = [
+  {
+    id: "m-week-1",
+    site_id: "ys1",
+    technicien_id: "tech-profile-id",
+    contract_id: "c1",
+    type: "preventif",
+    date_prevue: IN_2_DAYS,
+    date_reelle: null,
+    statut: "planifie",
+    notes: "Inspection complète — zones extérieures",
+    sites: {
+      id: "ys1",
+      nom: "Yooma Urban Lodge Paris 15e",
+      adresse: "173 Quai André Citroën",
+      ville: "Paris",
+      code_postal: "75015",
+      secteur: "hotel",
+      client_id: "demo-profile-id",
+    },
+    contracts: { formule: "serenite", frequence: 6 },
+  },
+  {
+    id: "m-week-2",
+    site_id: "ys2",
+    technicien_id: "tech-profile-id",
+    contract_id: "c2",
+    type: "preventif",
+    date_prevue: IN_4_DAYS,
+    date_reelle: null,
+    statut: "planifie",
+    notes: "Passage semestriel",
+    sites: {
+      id: "ys2",
+      nom: "Brasserie Voltaire",
+      adresse: "12 Rue de la Roquette",
+      ville: "Paris",
+      code_postal: "75011",
+      secteur: "restaurant",
+      client_id: "demo-profile-id",
+    },
+    contracts: { formule: "essentiel", frequence: 4 },
+  },
+  {
+    id: "m-week-3",
+    site_id: "ys1",
+    technicien_id: "tech-profile-id",
+    contract_id: "c1",
+    type: "urgence",
+    date_prevue: IN_6_DAYS,
+    date_reelle: null,
+    statut: "planifie",
+    notes: "Intervention urgente — signalement rongeurs",
+    sites: {
+      id: "ys1",
+      nom: "Yooma Urban Lodge Paris 15e",
+      adresse: "173 Quai André Citroën",
+      ville: "Paris",
+      code_postal: "75015",
+      secteur: "hotel",
+      client_id: "demo-profile-id",
+    },
+    contracts: { formule: "serenite", frequence: 6 },
+  },
+]
