@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { TechnicienHeader } from "@/components/technicien/TechnicienHeader"
 import { TechnicienNav } from "@/components/technicien/TechnicienNav"
+import { SwRegistrar } from "@/components/technicien/SwRegistrar"
 import type { Profile } from "@/lib/types/dashboard"
 import { SUPABASE_DEMO_TECH_PROFILE } from "@/lib/demo-data"
 
@@ -36,6 +37,7 @@ export default async function TechnicienLayout({ children }: { children: React.R
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F0E8" }}>
+      <SwRegistrar />
       <TechnicienHeader profile={profile} />
       <TechnicienNav />
       <main>{children}</main>

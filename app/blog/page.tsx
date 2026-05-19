@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 import { BLOG_ARTICLES } from "@/lib/blog-data";
-import { Logo } from "@/components/logo";
+import { MegaMenu } from "@/components/MegaMenu";
 
 export const metadata: Metadata = {
   title: "Blog — Réglementation HACCP, anti-nuisibles et conformité",
@@ -31,22 +31,7 @@ export default function BlogPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F0E8" }}>
-      {/* Nav verte */}
-      <header style={{ background: "#1B3A2D", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px" }}>
-          <Logo dark />
-          <nav style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <Link href="/" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Accueil</Link>
-            <Link href="/tarifs" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Tarifs</Link>
-            <Link
-              href="/login"
-              style={{ padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, color: "white", background: "#F26522", textDecoration: "none" }}
-            >
-              Accès Client
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <MegaMenu />
 
       <main style={{ maxWidth: "960px", margin: "0 auto", padding: "0 24px 80px" }}>
         {/* Header */}

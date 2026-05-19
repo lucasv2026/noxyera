@@ -35,7 +35,7 @@ const NIVEAU_BG: Record<string, string> = {
   faible:   "rgba(16,185,129,0.12)",
 }
 
-interface Suggestion { nom: string; adresse: string; lat?: number; lng?: number }
+interface Suggestion { nom: string; adresse: string; lat?: number; lng?: number; citycode?: string; postcode?: string; city?: string }
 
 function AnimGauge({ label, emoji, score, color, delay = 0 }: {
   label: string; emoji: string; score: number; color: string; delay?: number
@@ -91,20 +91,52 @@ export function PestAlertNetwork({ onSecteurSelect }: { onSecteurSelect?: (s: Se
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Autocomplete
+  // Autocomplete — appel parallèle adresse.data.gouv.fr + établissements
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (query.length < 3) { setSuggestions([]); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search-etablissement?query=${encodeURIComponent(query)}`)
-        if (res.ok) {
-          const data = await res.json() as Suggestion[]
-          setSuggestions(data)
+        const [adresseRes, etablissRes] = await Promise.allSettled([
+          fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5&type=housenumber`),
+          fetch(`/api/search-etablissement?query=${encodeURIComponent(query)}`),
+        ])
+
+        const merged: Suggestion[] = []
+
+        // Résultats adresse.data.gouv.fr
+        if (adresseRes.status === "fulfilled" && adresseRes.value.ok) {
+          const adresseData = await adresseRes.value.json() as {
+            features: Array<{
+              properties: { label: string; citycode: string; postcode: string; city: string }
+              geometry: { coordinates: [number, number] }
+            }>
+          }
+          for (const f of adresseData.features) {
+            merged.push({
+              nom: f.properties.label,
+              adresse: f.properties.label,
+              lat: f.geometry.coordinates[1],
+              lng: f.geometry.coordinates[0],
+              citycode: f.properties.citycode,
+              postcode: f.properties.postcode,
+              city: f.properties.city,
+            })
+          }
+        }
+
+        // Résultats établissements (Alim'confiance + Nominatim)
+        if (etablissRes.status === "fulfilled" && etablissRes.value.ok) {
+          const etablissData = await etablissRes.value.json() as Suggestion[]
+          merged.push(...etablissData.slice(0, 4))
+        }
+
+        if (merged.length > 0) {
+          setSuggestions(merged.slice(0, 8))
           setShowSuggestions(true)
         }
       } catch { /* silent */ }
-    }, 320)
+    }, 300)
   }, [query])
 
   function selectSuggestion(s: Suggestion) {

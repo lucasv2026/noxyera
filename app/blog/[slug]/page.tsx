@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, Calendar, ArrowRight } from "lucide-react";
 import { BLOG_ARTICLES, getArticle } from "@/lib/blog-data";
-import { Logo } from "@/components/logo";
+import { MegaMenu } from "@/components/MegaMenu";
 
 interface Props {
   params: { slug: string };
@@ -66,22 +66,7 @@ export default function BlogArticlePage({ params }: Props) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F0E8" }}>
-      {/* Nav verte */}
-      <header style={{ background: "#1B3A2D", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px" }}>
-          <Logo dark />
-          <nav style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <Link href="/blog" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Blog</Link>
-            <Link href="/tarifs" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>Tarifs</Link>
-            <Link
-              href="/login"
-              style={{ padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, color: "white", background: "#F26522", textDecoration: "none" }}
-            >
-              Accès Client
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <MegaMenu />
 
       <main style={{ maxWidth: "760px", margin: "0 auto", padding: "0 24px 80px" }}>
         {/* Breadcrumb */}

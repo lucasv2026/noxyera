@@ -1,3 +1,5 @@
+// TODO: Ajouter un auth guard ici — vérifier que l'utilisateur a le rôle "admin" avant d'afficher le layout.
+// Exemple : const { data: { user } } = await supabase.auth.getUser(); puis vérifier profile.role === 'admin'
 import Link from "next/link";
 import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp } from "lucide-react";
 

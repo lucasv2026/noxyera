@@ -5,48 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight, CheckCircle2, Calendar, FileText, ShieldCheck,
-  Zap, Users, BarChart3, Clock, Download, UserCircle,
+  Zap, Users, BarChart3, Clock, Download,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { PriceEstimator } from "@/components/landing/price-estimator";
 import { PestAlertNetwork } from "@/components/PestAlertNetwork";
+import { MegaMenu } from "@/components/MegaMenu";
 import type { Secteur } from "@/lib/pricing";
-
-// ── Navigation ───────────────────────────────────────────────────────────────
-function Navbar() {
-  return (
-    <header
-      className="sticky top-0 z-50 border-b"
-      style={{ background: "rgba(27,67,50,0.97)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}
-    >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-        <Logo dark />
-        <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "rgba(255,255,255,0.8)" }}>
-          <Link href="/suivi-sanitaire" className="hover:text-white transition-colors">Suivi sanitaire</Link>
-          <Link href="/tarifs" className="hover:text-white transition-colors">Tarifs</Link>
-          <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/espace-technicien"
-            className="hidden sm:inline-flex items-center rounded-[10px] border px-3 py-2 text-xs font-medium transition-colors hover:bg-white/10"
-            style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}
-          >
-            Techniciens
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/10"
-            style={{ borderColor: "rgba(255,255,255,0.5)" }}
-          >
-            <UserCircle size={16} />
-            Accès Client
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 function HeroSection() {
@@ -468,8 +433,8 @@ function PmeSection() {
           <div className="relative overflow-hidden rounded-2xl shadow-xl" style={{ aspectRatio: "4/3" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80"
-              alt="Cuisine professionnelle conforme HACCP"
+              src="https://images.unsplash.com/photo-1581299894007-aaa50297cf16?w=800"
+              alt="Cuisine professionnelle certifiée Noxyera"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
             <div style={{ position: "absolute", bottom: "16px", left: "16px" }}>
@@ -528,6 +493,13 @@ function PmeSection() {
 }
 
 function CtaSection() {
+  function scrollToPestAlert() {
+    document.getElementById("pest-alert")?.scrollIntoView({ behavior: "smooth" });
+  }
+  function scrollToEstimateur() {
+    document.getElementById("estimateur")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <section className="px-6 py-24 text-center" style={{ background: "#1b4332" }}>
       <div className="mx-auto max-w-2xl">
@@ -538,22 +510,22 @@ function CtaSection() {
           Rejoignez les 200+ établissements qui font confiance à Noxyera pour leur conformité sanitaire.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <a
-            href="#estimateur"
+          <button
+            onClick={scrollToPestAlert}
             className="inline-flex items-center gap-2 rounded-[14px] px-8 py-4 text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ background: "#f5f0e8", color: "#1b4332" }}
+            style={{ background: "#f5f0e8", color: "#1b4332", border: "none", cursor: "pointer" }}
+          >
+            Calculer mon score →
+          </button>
+          <button
+            onClick={scrollToEstimateur}
+            className="inline-flex items-center gap-2 rounded-[14px] border px-8 py-4 text-sm font-semibold text-white transition-all hover:bg-white/10"
+            style={{ borderColor: "rgba(255,255,255,0.3)", background: "transparent", cursor: "pointer" }}
           >
             <Calendar size={15} />
-            Demander un audit gratuit
+            Estimez mon tarif en 60 secondes
             <ArrowRight size={15} />
-          </a>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-[14px] border px-8 py-4 text-sm font-semibold text-white transition-all hover:bg-white/10"
-            style={{ borderColor: "rgba(255,255,255,0.3)" }}
-          >
-            Voir la démo
-          </Link>
+          </button>
         </div>
       </div>
     </section>
@@ -585,7 +557,7 @@ export default function HomePage() {
 
   return (
     <main>
-      <Navbar />
+      <MegaMenu />
       <HeroSection />
       <FeaturesStrip />
       <PestAlertNetwork onSecteurSelect={setSecteurPreselect} />
