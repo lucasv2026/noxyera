@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { ArrowRight, CalendarDays, MapPin, Clock, AlertTriangle } from "lucide-react"
 import {
   SUPABASE_DEMO_TECH_PROFILE,
@@ -7,6 +8,7 @@ import {
   type MissionWithSite,
 } from "@/lib/demo-data"
 import type { Profile } from "@/lib/types/dashboard"
+import { RapportSuccessBanner } from "@/components/technicien/RapportSuccessBanner"
 
 const TYPE_CONFIG = {
   preventif: { label: "Préventif",  bg: "#D1FAE5", color: "#065F46" },
@@ -102,6 +104,9 @@ export default async function MissionsPage() {
 
   return (
     <div style={{ maxWidth: "680px", margin: "0 auto", padding: "32px 20px 64px" }}>
+      <Suspense fallback={null}>
+        <RapportSuccessBanner />
+      </Suspense>
       {/* Header */}
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#1B3A2D", margin: 0 }}>
@@ -228,23 +233,23 @@ export default async function MissionsPage() {
 
                   {/* CTA */}
                   <Link
-                    href={`/technicien/rapport/${mission.id}`}
+                    href={`/technicien/mission/${mission.id}/arrivee`}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "8px",
-                      padding: "12px",
+                      padding: "14px",
                       marginTop: "12px",
-                      borderRadius: "10px",
+                      borderRadius: "8px",
                       background: "#1B3A2D",
                       color: "white",
-                      fontSize: "14px",
-                      fontWeight: 700,
+                      fontSize: "15px",
+                      fontWeight: 600,
                       textDecoration: "none",
                     }}
                   >
-                    Saisir le rapport
+                    Démarrer l&apos;intervention
                     <ArrowRight size={14} />
                   </Link>
                 </div>

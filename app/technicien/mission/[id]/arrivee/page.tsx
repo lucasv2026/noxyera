@@ -2,45 +2,40 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { SUPABASE_DEMO_MISSIONS_TODAY } from "@/lib/demo-data"
-import { Check, MapPin } from "lucide-react"
+import { SUPABASE_DEMO_MISSIONS_TODAY, SUPABASE_DEMO_MISSIONS_WEEK } from "@/lib/demo-data"
+import { MapPin, ArrowLeft } from "lucide-react"
+
+const DEMO_MISSIONS = [...SUPABASE_DEMO_MISSIONS_TODAY, ...SUPABASE_DEMO_MISSIONS_WEEK]
 
 function ProgressBar({ step }: { step: number }) {
-  const steps = ["Arrivée", "Inspection", "Produits", "Signature"]
+  const steps = ["Arrivée", "Zones", "Produits", "Signature"]
+  const pct = (step / steps.length) * 100
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "28px" }}>
-      {steps.map((label, idx) => {
-        const isActive = idx === step - 1
-        const isDone = idx < step - 1
-        return (
-          <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-            <div style={{
-              width: "28px", height: "28px", borderRadius: "50%",
-              background: isActive ? "#F26522" : isDone ? "#27AE60" : "#E5E7EB",
-              color: isActive || isDone ? "white" : "#9CA3AF",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "12px", fontWeight: 700,
-            }}>
-              {isDone ? <Check size={12} /> : idx + 1}
-            </div>
-            <span style={{ fontSize: "10px", color: isActive ? "#F26522" : "#9CA3AF", fontWeight: isActive ? 700 : 400 }}>
-              {label}
-            </span>
-          </div>
-        )
-      })}
+    <div style={{ marginBottom: "28px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+        <span style={{ fontSize: "12px", fontWeight: 700, color: "#F26522" }}>
+          Étape {step}/{steps.length}
+        </span>
+        <span style={{ fontSize: "12px", color: "#9CA3AF" }}>{steps[step - 1]}</span>
+      </div>
+      <div style={{ height: "6px", background: "#E5E7EB", borderRadius: "99px", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: "#F26522", borderRadius: "99px", transition: "width 0.3s" }} />
+      </div>
     </div>
   )
 }
 
-export default function ArriveeePage() {
+export default function ArriveePage() {
   const params = useParams()
   const router = useRouter()
   const missionId = params?.id as string
 
-  const mission = SUPABASE_DEMO_MISSIONS_TODAY.find((m) => m.id === missionId) ?? SUPABASE_DEMO_MISSIONS_TODAY[0]
+  const mission = DEMO_MISSIONS.find((m) => m.id === missionId) ?? DEMO_MISSIONS[0]
 
-  const [time, setTime] = useState(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  )
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -49,72 +44,135 @@ export default function ArriveeePage() {
     return () => clearInterval(interval)
   }, [])
 
-  const typeLabel: Record<string, string> = {
-    preventif: "Préventif",
-    curatif: "Curatif",
-    urgence: "Urgence",
+  async function handleArrivee() {
+    setLoading(true)
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+
+    if (!isDemoMode) {
+      try {
+        const { createClient } = await import("@supabase/supabase-js")
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+        await supabase
+          .from("interventions")
+          .update({ statut: "en_cours", heure_arrivee: new Date().toISOString() })
+          .eq("id", missionId)
+      } catch {
+        // Proceed anyway
+      }
+    }
+
+    // Save arrival time for recap
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`mission-${missionId}-arrivee`, new Date().toISOString())
+    }
+
+    router.push(`/technicien/mission/${missionId}/zones`)
   }
 
+  const site = mission?.sites
+
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "32px 20px 64px" }}>
-      {/* Badge intervention en cours */}
-      <div style={{ textAlign: "center", marginBottom: "24px" }}>
-        <span style={{ padding: "6px 16px", borderRadius: "20px", background: "#FEE2E2", color: "#DC2626", fontSize: "12px", fontWeight: 700 }}>
-          ● INTERVENTION EN COURS
+    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "24px 20px 64px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+        <button
+          onClick={() => router.push("/technicien/missions")}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: "4px",
+            color: "#6B7280", fontSize: "14px", padding: 0,
+          }}
+        >
+          <ArrowLeft size={16} /> Retour
+        </button>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: "13px", color: "#9CA3AF", fontFamily: "monospace" }}>
+          #{missionId.slice(-6).toUpperCase()}
         </span>
       </div>
 
       <ProgressBar step={1} />
 
-      {/* Card */}
-      <div style={{ background: "white", borderRadius: "20px", padding: "28px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", marginBottom: "24px" }}>
-        {/* Heure temps réel */}
-        <div style={{ textAlign: "center", marginBottom: "20px", padding: "16px", background: "#F5F0E8", borderRadius: "12px" }}>
-          <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase" }}>Heure actuelle</p>
-          <p style={{ fontSize: "36px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "monospace" }}>{time}</p>
+      {/* Central card */}
+      <div style={{
+        background: "white",
+        borderRadius: "16px",
+        padding: "32px 28px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+        marginBottom: "24px",
+        textAlign: "center",
+      }}>
+        <div style={{
+          width: "72px", height: "72px", borderRadius: "50%",
+          background: "#F0F9F4",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 20px",
+        }}>
+          <MapPin size={32} color="#1B3A2D" />
         </div>
 
-        {/* Adresse */}
-        <div style={{ marginBottom: "16px" }}>
-          <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase" }}>Site</p>
-          <p style={{ fontSize: "16px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 2px" }}>{mission.sites?.nom ?? "—"}</p>
-          <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
-            {mission.sites?.adresse} · {mission.sites?.ville} {mission.sites?.code_postal}
+        <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#1A1A1A", margin: "0 0 8px" }}>
+          Confirmez votre arrivée
+        </h1>
+
+        {site && (
+          <div style={{ marginBottom: "20px" }}>
+            <p style={{ fontSize: "16px", fontWeight: 600, color: "#1B3A2D", margin: "0 0 4px" }}>
+              {site.nom}
+            </p>
+            <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
+              {site.adresse} — {site.ville} {site.code_postal}
+            </p>
+          </div>
+        )}
+
+        {/* Live clock */}
+        <div style={{
+          background: "#F5F0E8", borderRadius: "12px", padding: "16px",
+          marginBottom: "8px",
+        }}>
+          <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Heure actuelle
           </p>
-        </div>
-
-        {/* Type */}
-        <div>
-          <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "0 0 6px", fontWeight: 600, textTransform: "uppercase" }}>Type d&apos;intervention</p>
-          <span style={{
-            padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 700,
-            background: mission.type === "urgence" ? "#FEE2E2" : mission.type === "curatif" ? "#FEF3C7" : "#D1FAE5",
-            color: mission.type === "urgence" ? "#991B1B" : mission.type === "curatif" ? "#92400E" : "#065F46",
-          }}>
-            {typeLabel[mission.type] ?? mission.type}
-          </span>
+          <p style={{ fontSize: "36px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "monospace" }}>
+            {time}
+          </p>
         </div>
       </div>
 
-      {/* CTA */}
+      {/* CTA Button */}
       <button
-        onClick={() => router.push(`/technicien/mission/${missionId}/inspection`)}
+        onClick={handleArrivee}
+        disabled={loading}
         style={{
           width: "100%",
-          padding: "16px",
-          borderRadius: "14px",
-          background: "#27AE60",
+          height: "64px",
+          borderRadius: "12px",
+          background: loading ? "#6B7280" : "#1B3A2D",
           color: "white",
-          fontSize: "16px",
+          fontSize: "18px",
           fontWeight: 700,
           border: "none",
-          cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(39,174,96,0.3)",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+          cursor: loading ? "not-allowed" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+          boxShadow: loading ? "none" : "0 4px 16px rgba(27,58,45,0.3)",
+          transition: "all 0.15s",
         }}
       >
-        <MapPin size={16} /> Je suis sur site
+        {loading ? (
+          <>
+            <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.8s linear infinite" }} />
+            Enregistrement...
+          </>
+        ) : (
+          "Je suis sur site ✓"
+        )}
       </button>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
