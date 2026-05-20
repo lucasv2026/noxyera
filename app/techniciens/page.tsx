@@ -174,7 +174,7 @@ export default function TechniciensPage() {
               {
                 num: 3,
                 title: 'Formation Noxyera',
-                desc: '2 jours de formation offerts : protocoles, outils, applications.',
+                desc: 'Formation complète offerte : protocoles, outils, applications Noxyera.',
               },
               {
                 num: 4,
@@ -211,7 +211,7 @@ export default function TechniciensPage() {
               { Icon: Smartphone, title: 'Application mobile', desc: 'Tournées optimisées, rapports en 1 clic, historique client complet.' },
               { Icon: Wrench, title: 'Équipement professionnel', desc: 'Kit de démarrage fourni : produits homologués, EPI, matériel de détection.' },
               { Icon: Users, title: 'Clients récurrents', desc: 'Contrats annuels HACCP = revenus stables et prévisibles.' },
-              { Icon: Euro, title: 'Facturation simplifiée', desc: 'On gère tout : facturation, relances, encaissements. Vous touchez 70%.' },
+              { Icon: Euro, title: 'Facturation simplifiée', desc: 'On gère tout : facturation, relances, encaissements. Vous vous concentrez sur les interventions.' },
               { Icon: Shield, title: 'Assurance RC Pro', desc: 'Couverture RC Pro incluse pour toutes vos interventions Noxyera.' },
               { Icon: TrendingUp, title: 'Évolution possible', desc: 'Les meilleurs techniciens peuvent devenir responsables secteur.' },
             ].map(({ Icon, title, desc }) => (
