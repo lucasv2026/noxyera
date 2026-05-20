@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, X } from "lucide-react";
+import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, UserPlus, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 const SECTEUR_ITEMS = [
@@ -162,6 +162,20 @@ export function MegaMenu() {
                     <DropdownItem key={item.href} {...item} />
                   ))}
                 </div>
+
+                {/* Séparateur + Devenir technicien */}
+                <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #E5E7EB", marginTop: "8px", paddingTop: "12px" }}>
+                  <p style={{ fontSize: "11px", textTransform: "uppercase", color: "#6B7280", fontWeight: 700, letterSpacing: "0.08em", margin: "0 12px 6px" }}>
+                    Vous êtes technicien ?
+                  </p>
+                  <DropdownItem
+                    icon={UserPlus}
+                    title="Devenir technicien"
+                    desc="Rejoignez notre réseau"
+                    href="/devenir-technicien"
+                    badge="On recrute"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -268,6 +282,7 @@ export function MegaMenu() {
             { label: "Tarifs", href: "/tarifs" },
             { label: "Blog", href: "/blog" },
             { label: "Techniciens", href: "/espace-technicien" },
+            { label: "Devenir technicien", href: "/devenir-technicien" },
           ].map(({ label, href }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} style={{ display: "block", padding: "12px 0", color: "rgba(255,255,255,0.85)", fontSize: "15px", fontWeight: 500, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               {label}
