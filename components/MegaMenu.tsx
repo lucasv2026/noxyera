@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, UserPlus, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -55,6 +56,75 @@ function DropdownItem({ icon: Icon, title, desc, href, badge }: {
   )
 }
 
+function SpaceToggle({ mobile = false }: { mobile?: boolean }) {
+  const pathname = usePathname();
+
+  const isClient =
+    pathname === "/" ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/suivi") ||
+    pathname.startsWith("/tarifs") ||
+    pathname.startsWith("/audit") ||
+    pathname.startsWith("/blog");
+
+  const isTechnicien =
+    pathname === "/techniciens" ||
+    pathname.startsWith("/technicien") ||
+    pathname.startsWith("/devenir-technicien");
+
+  const activePill: React.CSSProperties = {
+    background: "white",
+    color: "#1B3A2D",
+    fontWeight: 600,
+    borderRadius: 22,
+    padding: "7px 20px",
+    fontSize: 14,
+    cursor: "pointer",
+    border: "none",
+    transition: "all 0.2s",
+    flex: mobile ? 1 : undefined,
+    textAlign: mobile ? "center" : undefined,
+    whiteSpace: "nowrap",
+  };
+
+  const inactivePill: React.CSSProperties = {
+    background: "transparent",
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: 400,
+    borderRadius: 22,
+    padding: "7px 20px",
+    fontSize: 14,
+    cursor: "pointer",
+    border: "none",
+    flex: mobile ? 1 : undefined,
+    textAlign: mobile ? "center" : undefined,
+    whiteSpace: "nowrap",
+  };
+
+  return (
+    <div style={{
+      display: "flex",
+      background: "rgba(255,255,255,0.15)",
+      borderRadius: 25,
+      padding: 3,
+      width: mobile ? "100%" : undefined,
+    }}>
+      <Link
+        href="/"
+        style={isClient ? activePill : inactivePill}
+      >
+        Espace client
+      </Link>
+      <Link
+        href="/techniciens"
+        style={isTechnicien ? activePill : inactivePill}
+      >
+        Je suis technicien
+      </Link>
+    </div>
+  );
+}
+
 export function MegaMenu() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -95,14 +165,17 @@ export function MegaMenu() {
         {/* Logo */}
         <Logo dark />
 
+        {/* Desktop toggle — centré */}
+        <div style={{ flex: 1, display: "flex", justifyContent: "center" }} className="hide-mobile">
+          <SpaceToggle />
+        </div>
+
         {/* Desktop nav — centre-gauche */}
         <nav
           style={{
             display: "flex",
             alignItems: "center",
             gap: "32px",
-            flex: 1,
-            marginLeft: "48px",
           }}
           className="hide-mobile"
         >
@@ -247,6 +320,10 @@ export function MegaMenu() {
       {/* Mobile panel */}
       {mobileOpen && (
         <div style={{ position: "absolute", top: "64px", left: 0, right: 0, background: "#1B3A2D", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "16px 24px", zIndex: 99 }}>
+          {/* Mobile toggle */}
+          <div style={{ marginBottom: 16 }}>
+            <SpaceToggle mobile />
+          </div>
           {/* Suivi sanitaire accordion */}
           <button
             onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
