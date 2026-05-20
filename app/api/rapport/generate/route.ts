@@ -149,10 +149,12 @@ export async function POST(request: NextRequest) {
             const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
             await sendRapportEmail(
               clientProfile.email,
-              (site as { client_id: string; nom?: string }).nom ?? siteName ?? 'Site inconnu',
-              pdfUrl ?? `${siteUrl}/dashboard/rapports`,
-              technicienNom,
-              dateStr,
+              {
+                nomSite: (site as { client_id: string; nom?: string }).nom ?? siteName ?? 'Site inconnu',
+                dateIntervention: dateStr,
+                nomTechnicien: technicienNom,
+                pdfUrl: pdfUrl ?? `${siteUrl}/dashboard/rapports`,
+              },
             )
           }
         }
