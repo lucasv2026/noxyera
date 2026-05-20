@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Minus, Plus } from "lucide-react"
+import { Minus, Plus, Check } from "lucide-react"
 
 function ProgressBar({ step }: { step: number }) {
   const steps = ["Arrivée", "Inspection", "Produits", "Signature"]
@@ -20,7 +20,7 @@ function ProgressBar({ step }: { step: number }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "12px", fontWeight: 700,
             }}>
-              {isDone ? "✓" : idx + 1}
+              {isDone ? <Check size={12} /> : idx + 1}
             </div>
             <span style={{ fontSize: "10px", color: isActive ? "#F26522" : "#9CA3AF", fontWeight: isActive ? 700 : 400 }}>
               {label}

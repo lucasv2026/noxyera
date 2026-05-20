@@ -178,7 +178,7 @@ function CheckoutModal({
             className="rounded-xl p-3 text-xs"
             style={{ background: "rgba(239,68,68,0.1)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.2)" }}
           >
-            ⚠ {error}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AlertCircle size={13} /> {error}</span>
           </div>
         )}
 

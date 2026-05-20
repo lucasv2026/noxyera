@@ -390,7 +390,7 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
               </p>
             </div>
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
-              ✓ Estimation envoyée à {email}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Check size={12} /> Estimation envoyée à {email}</span>
             </p>
             <a
               href="mailto:contact@noxyera.com?subject=Demande audit gratuit Noxyera"

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { Check, Camera } from "lucide-react"
 
 function ProgressBar({ step }: { step: number }) {
   const steps = ["Arrivée", "Inspection", "Produits", "Signature"]
@@ -19,7 +20,7 @@ function ProgressBar({ step }: { step: number }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "12px", fontWeight: 700,
             }}>
-              {isDone ? "✓" : idx + 1}
+              {isDone ? <Check size={12} /> : idx + 1}
             </div>
             <span style={{ fontSize: "10px", color: isActive ? "#F26522" : "#9CA3AF", fontWeight: isActive ? 700 : 400 }}>
               {label}
@@ -88,7 +89,9 @@ export default function InspectionPage() {
                   marginBottom: "12px", width: "fit-content",
                 }}
               >
-                📷 {res.photo ? "Photo ajoutée ✓" : "Photo"}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <Camera size={12} /> {res.photo ? <><Check size={11} /> Photo ajoutée</> : "Photo"}
+                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -135,7 +138,7 @@ export default function InspectionPage() {
                     fontSize: "11px", fontWeight: 700, color: "#DC2626",
                   }}
                 >
-                  {res.traces ? "✓" : ""}
+                  {res.traces ? <Check size={11} /> : ""}
                 </button>
                 <span style={{ fontSize: "13px", color: "#374151" }}>Traces détectées</span>
               </div>

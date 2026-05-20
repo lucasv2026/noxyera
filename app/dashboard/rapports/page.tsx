@@ -1,4 +1,4 @@
-import { FileText, ChevronRight } from "lucide-react"
+import { FileText, ChevronRight, AlertTriangle } from "lucide-react"
 import { SUPABASE_DEMO_RAPPORTS } from "@/lib/demo-data"
 import type { RapportWithRelations } from "@/lib/types/dashboard"
 import Link from "next/link"
@@ -139,7 +139,7 @@ export default async function RapportsPage() {
                     <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0" }}>
                       <TypeLabel type={rapport.interventions.type} />
                       {isAnomalie && (
-                        <span style={{ marginLeft: "8px", color: "#F26522", fontWeight: 600 }}>⚠ Anomalie détectée</span>
+                        <span style={{ marginLeft: "8px", color: "#F26522", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}><AlertTriangle size={12} /> Anomalie détectée</span>
                       )}
                     </p>
                   )}
@@ -153,7 +153,7 @@ export default async function RapportsPage() {
                     background: rapport.haccp_conforme ? "#D1FAE5" : "#FEF3C7",
                     color: rapport.haccp_conforme ? "#065F46" : "#92400E",
                   }}>
-                    {rapport.haccp_conforme ? "98%" : "⚠ Non conforme"}
+                    {rapport.haccp_conforme ? "98%" : "Non conforme"}
                   </span>
                   <ChevronRight size={16} style={{ color: "#9CA3AF" }} />
                 </div>

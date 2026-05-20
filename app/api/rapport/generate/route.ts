@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     // Observations enrichies
     const notesComplet = [
       observations,
-      presenceActive ? '⚠ Présence active détectée lors de cette intervention.' : '',
-      recommandationSuivi ? '➜ Recommandation : suivi à planifier sous 15 jours.' : '',
+      presenceActive ? 'ALERTE : Présence active détectée lors de cette intervention.' : '',
+      recommandationSuivi ? 'Recommandation : suivi à planifier sous 15 jours.' : '',
     ].filter(Boolean).join('\n\n')
 
     // Génération PDF

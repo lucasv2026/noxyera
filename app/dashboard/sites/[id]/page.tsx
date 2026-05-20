@@ -3,6 +3,7 @@
 import { SUPABASE_DEMO_SITES, SUPABASE_DEMO_RAPPORTS } from "@/lib/demo-data"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import { Check, AlertTriangle } from "lucide-react"
 
 const ZONE_CONFIG: Record<string, { label: string; ok: boolean }> = {
   cuisine: { label: "Cuisine", ok: true },
@@ -146,7 +147,9 @@ export default function SiteDetailPage() {
                       color: conf.ok ? "#065F46" : "#92400E",
                     }}
                   >
-                    {conf.label} {conf.ok ? "✓" : "⚠"}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      {conf.ok ? <Check size={12} /> : <AlertTriangle size={12} />} {conf.label}
+                    </span>
                   </span>
                 )
               })}
@@ -184,7 +187,7 @@ export default function SiteDetailPage() {
                         : formatDate(r.created_at)}
                     </p>
                     <span style={{ padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, background: "#D1FAE5", color: "#065F46" }}>
-                      HACCP ✓
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}><Check size={11} /> HACCP</span>
                     </span>
                   </div>
                   <Link

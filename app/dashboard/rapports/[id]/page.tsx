@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation"
 import { SUPABASE_DEMO_RAPPORTS } from "@/lib/demo-data"
 import Link from "next/link"
+import { Check, AlertTriangle } from "lucide-react"
 
 function QrCodeSimulation({ reference, datetime }: { reference: string; datetime: string }) {
   // Simple SVG QR-like pattern
@@ -98,7 +99,10 @@ export default function RapportDetailPage() {
           color: rapport.haccp_conforme ? "#065F46" : "#92400E",
           fontSize: "13px", fontWeight: 700,
         }}>
-          {rapport.haccp_conforme ? "✓ HACCP Conforme" : "⚠ Anomalie détectée"}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            {rapport.haccp_conforme ? <Check size={13} /> : <AlertTriangle size={13} />}
+            {rapport.haccp_conforme ? "HACCP Conforme" : "Anomalie détectée"}
+          </span>
         </span>
       </div>
 
@@ -178,7 +182,9 @@ export default function RapportDetailPage() {
                   color: i < 3 ? "#065F46" : "#1B3A2D",
                 }}
               >
-                {zone} {i < 3 ? "✓" : ""}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {i < 3 && <Check size={12} />} {zone}
+                </span>
               </span>
             ))}
           </div>

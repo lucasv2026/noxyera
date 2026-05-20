@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowRight, CheckCircle2, Loader2, Upload, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, Upload, X, Check, Search } from "lucide-react";
 import { MegaMenu } from "@/components/MegaMenu";
 
 interface AdresseSuggestion {
@@ -239,7 +239,7 @@ export default function AuditDistancePage() {
             <CheckCircle2 size={28} style={{ color: "#059669" }} />
           </div>
           <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#1A1A1A", margin: "0 0 10px" }}>
-            Demande envoyée ✓
+            Demande envoyée
           </h2>
           <p style={{ fontSize: "15px", color: "#6B7280", margin: "0 0 28px", lineHeight: 1.6 }}>
             Notre équipe vous contacte sous 24h pour organiser votre audit à distance.
@@ -285,7 +285,7 @@ export default function AuditDistancePage() {
               marginBottom: "14px",
             }}
           >
-            🔍 Audit à distance — Bêta
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Search size={12} /> Audit à distance — Bêta</span>
           </span>
           <h1 style={{ fontSize: "clamp(22px, 4vw, 32px)", fontWeight: 700, color: "white", margin: "0 0 10px" }}>
             Demandez votre audit à distance
@@ -320,7 +320,7 @@ export default function AuditDistancePage() {
                     margin: "0 auto 4px",
                   }}
                 >
-                  {isDone ? "✓" : num}
+                  {isDone ? <Check size={12} /> : num}
                 </div>
                 <p style={{ fontSize: "11px", color: isActive ? "#F26522" : "#9CA3AF", margin: 0, fontWeight: isActive ? 700 : 400 }}>
                   {title}

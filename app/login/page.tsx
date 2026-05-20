@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Loader2, ShieldCheck, FileText, BarChart3, ArrowRight } from "lucide-react";
+import { Mail, Lock, Loader2, ShieldCheck, FileText, BarChart3, ArrowRight, AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { createClient } from "@/lib/supabase/client";
 
@@ -134,7 +134,7 @@ export default function LoginPage() {
                 gap: "8px",
               }}
             >
-              <span>⚠</span>
+              <AlertTriangle size={14} />
               {error}
             </div>
           )}
