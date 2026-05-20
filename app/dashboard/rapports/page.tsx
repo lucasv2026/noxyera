@@ -2,6 +2,7 @@ import { FileText, ChevronRight, AlertTriangle } from "lucide-react"
 import { SUPABASE_DEMO_RAPPORTS } from "@/lib/demo-data"
 import type { RapportWithRelations } from "@/lib/types/dashboard"
 import Link from "next/link"
+import { PdfDownloadButton } from "./PdfDownloadButton"
 
 async function getRapports(): Promise<RapportWithRelations[]> {
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
@@ -104,18 +105,26 @@ export default async function RapportsPage() {
             const isAnomalie = !rapport.haccp_conforme
 
             return (
-              <Link
+              <div
                 key={rapport.id}
-                href={`/dashboard/rapports/${rapport.id}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "16px",
                   padding: "16px 20px",
-                  textDecoration: "none",
                   borderBottom: idx < rapports.length - 1 ? "1px solid #F9FAFB" : "none",
                   background: isAnomalie ? "rgba(254,243,199,0.4)" : "transparent",
-                  transition: "background 0.15s",
+                }}
+              >
+              <Link
+                href={`/dashboard/rapports/${rapport.id}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  flex: 1,
+                  minWidth: 0,
+                  textDecoration: "none",
                 }}
               >
                 {/* Icon */}
@@ -158,6 +167,10 @@ export default async function RapportsPage() {
                   <ChevronRight size={16} style={{ color: "#9CA3AF" }} />
                 </div>
               </Link>
+
+              {/* Bouton télécharger PDF */}
+              <PdfDownloadButton pdfUrl={rapport.pdf_url} />
+              </div>
             )
           })
         )}

@@ -213,7 +213,7 @@ export default function SignaturePage() {
 
     setState("success")
     setTimeout(() => {
-      router.push("/technicien/missions?rapport=ok")
+      router.push(`/technicien/mission/${missionId}/confirmation`)
     }, 2000)
   }
 
