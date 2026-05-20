@@ -117,7 +117,7 @@ export default async function DashboardPage() {
         <div style={{ marginBottom: "32px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "var(--font-display), serif" }}>
-              Bonjour {profile.prenom ?? profile.entreprise ?? "Client"} 👋
+              Bonjour {profile.prenom ?? profile.entreprise ?? "Client"}
             </h1>
             <p style={{ fontSize: "14px", color: "#F26522", fontWeight: 600, marginTop: "4px", marginBottom: 0 }}>
               {todayDisplay}
@@ -259,7 +259,7 @@ export default async function DashboardPage() {
       <div style={{ marginBottom: "32px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#1B3A2D", margin: 0, fontFamily: "var(--font-display), serif" }}>
-            Bonjour {profile.prenom ?? profile.entreprise ?? "Client"} 👋
+            Bonjour {profile.prenom ?? profile.entreprise ?? "Client"}
           </h1>
           <p style={{ fontSize: "14px", color: "#F26522", fontWeight: 600, marginTop: "4px", marginBottom: 0 }}>
             {todayDisplay}

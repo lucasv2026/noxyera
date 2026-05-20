@@ -131,7 +131,9 @@ export default async function MissionsPage() {
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
             }}
           >
-            <p style={{ fontSize: "22px", margin: "0 0 8px" }}>☀️</p>
+            <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+              <CalendarDays size={18} style={{ color: "#F59E0B" }} />
+            </div>
             <p style={{ fontSize: "16px", fontWeight: 600, color: "#1B3A2D", margin: "0 0 6px" }}>
               Aucune mission planifiée aujourd&apos;hui.
             </p>
@@ -204,6 +206,26 @@ export default async function MissionsPage() {
                     </p>
                   )}
 
+                  {/* Préparez votre intervention */}
+                  <div style={{
+                    marginTop: "12px", paddingTop: "12px",
+                    borderTop: "1px solid rgba(0,0,0,0.06)"
+                  }}>
+                    <p style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
+                      Préparez votre intervention
+                    </p>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {["Cuisine", "Cave", "Réserves"].map(zone => (
+                        <span key={zone} style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", backgroundColor: "#F5F0E8", color: "#6B7280" }}>
+                          {zone}
+                        </span>
+                      ))}
+                      <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", backgroundColor: "#D1FAE5", color: "#065F46", fontWeight: 600 }}>
+                        Données pré-chargées
+                      </span>
+                    </div>
+                  </div>
+
                   {/* CTA */}
                   <Link
                     href={`/technicien/rapport/${mission.id}`}
@@ -213,6 +235,7 @@ export default async function MissionsPage() {
                       justifyContent: "center",
                       gap: "8px",
                       padding: "12px",
+                      marginTop: "12px",
                       borderRadius: "10px",
                       background: "#1B3A2D",
                       color: "white",

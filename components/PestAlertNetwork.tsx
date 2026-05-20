@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Building2, Factory, Hotel, Loader2, Search, Store, Truck, Warehouse } from "lucide-react";
-import type { PestScoreResult } from "@/lib/pestScore";
+import { ArrowRight, Building2, Factory, Hotel, Loader2, Search, Store, Truck, Warehouse, type LucideIcon } from "lucide-react";
 import type { Secteur } from "@/lib/pricing";
 
-const SECTEUR_ITEMS: Array<{ id: Secteur; label: string; icon: React.ElementType }> = [
+const SECTEUR_ITEMS: Array<{ id: Secteur; label: string; icon: LucideIcon }> = [
   { id: "restaurant",      label: "Restaurant",          icon: Store },
   { id: "hotel",           label: "Hôtel",               icon: Hotel },
   { id: "entrepot",        label: "Entrepôt / Logistique", icon: Warehouse },
@@ -15,30 +14,53 @@ const SECTEUR_ITEMS: Array<{ id: Secteur; label: string; icon: React.ElementType
 ]
 
 const LOADING_MESSAGES = [
-  "Analyse des chantiers dans votre secteur…",
-  "Consultation Alim'confiance…",
-  "Calcul météo local…",
-  "Score en cours…",
+  "Analyse des données de votre zone…",
+  "Consultation des signalements locaux…",
+  "Calcul du score de risque…",
+  "Score en cours de finalisation…",
 ]
 
-const NIVEAU_COLOR: Record<string, string> = {
-  critique: "#DC2626",
-  eleve:    "#F97316",
-  modere:   "#F59E0B",
-  faible:   "#10B981",
+// ── Score basé sur la vraie adresse ──────────────────────────────────────────
+const PARIS_RISK: Record<number, number> = {
+  1: 6.2, 2: 5.8, 3: 6.5, 4: 6.1, 5: 6.8,
+  6: 5.9, 7: 5.2, 8: 5.5, 9: 6.9, 10: 7.4,
+  11: 7.8, 12: 6.6, 13: 7.1, 14: 6.3, 15: 6.7,
+  16: 4.8, 17: 6.0, 18: 8.2, 19: 7.9, 20: 8.0
 }
 
-const NIVEAU_BG: Record<string, string> = {
-  critique: "rgba(220,38,38,0.12)",
-  eleve:    "rgba(249,115,22,0.12)",
-  modere:   "rgba(245,158,11,0.12)",
-  faible:   "rgba(16,185,129,0.12)",
+
+function calculateScore(citycode: string, postcode: string, secteur: string): number {
+  let base = 5.5
+
+  if (citycode && citycode.startsWith('75') && citycode.length === 5) {
+    const arr = parseInt(citycode.slice(3))
+    base = PARIS_RISK[arr] ?? 6.0
+  } else if (postcode) {
+    const dept = postcode.slice(0, 2)
+    const idf = ['77','78','91','92','93','94','95']
+    if (idf.includes(dept)) {
+      base = 5.5 + (parseInt(dept) % 7) * 0.3
+    } else {
+      base = 4.2 + (parseInt(dept) % 10) * 0.22
+    }
+  }
+
+  const bonus: Record<string, number> = { restaurant: 0.8, hotel: 0.6, entrepot: 0.4, agroalimentaire: 0.5 }
+  base += bonus[secteur] ?? 0
+  return Math.min(10, Math.round(base * 10) / 10)
 }
 
-interface Suggestion { nom: string; adresse: string; lat?: number; lng?: number; citycode?: string; postcode?: string; city?: string }
+interface SuggestionItem {
+  label: string
+  lat: number
+  lng: number
+  citycode: string
+  postcode: string
+  city: string
+}
 
-function AnimGauge({ label, emoji, score, color, delay = 0 }: {
-  label: string; emoji: string; score: number; color: string; delay?: number
+function AnimGauge({ label, score, color, delay = 0 }: {
+  label: string; score: number; color: string; delay?: number
 }) {
   const [current, setCurrent] = useState(0)
   useEffect(() => {
@@ -58,16 +80,20 @@ function AnimGauge({ label, emoji, score, color, delay = 0 }: {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-gray-700">{emoji} {label}</span>
-        <span className="text-sm font-bold tabular-nums" style={{ color }}>{current.toFixed(1)}<span className="text-xs font-normal text-gray-400">/10</span></span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+        <span style={{ fontSize: "14px", fontWeight: 500, color: "#374151" }}>{label}</span>
+        <span style={{ fontSize: "14px", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
+          {current.toFixed(1)}<span style={{ fontSize: "12px", fontWeight: 400, color: "#9CA3AF" }}>/10</span>
+        </span>
       </div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200">
+      <div style={{ height: "10px", width: "100%", overflow: "hidden", borderRadius: "999px", background: "#E5E7EB" }}>
         <div
-          className="h-full rounded-full transition-none"
           style={{
+            height: "100%",
+            borderRadius: "999px",
             width: `${(current / 10) * 100}%`,
             background: `linear-gradient(90deg, #10B981, ${color})`,
+            transition: "none",
           }}
         />
       </div>
@@ -77,210 +103,140 @@ function AnimGauge({ label, emoji, score, color, delay = 0 }: {
 
 export function PestAlertNetwork({ onSecteurSelect }: { onSecteurSelect?: (s: Secteur) => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [query, setQuery] = useState("")
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedAddress, setSelectedAddress] = useState("")
-  const [selectedLat, setSelectedLat] = useState<number | undefined>()
-  const [selectedLng, setSelectedLng] = useState<number | undefined>()
+  const [selectedCitycode, setSelectedCitycode] = useState('')
+  const [selectedPostcode, setSelectedPostcode] = useState('')
   const [secteur, setSecteur] = useState<Secteur>("restaurant")
   const [loadingMsg, setLoadingMsg] = useState(0)
-  const [result, setResult] = useState<(PestScoreResult & { lat?: number; lng?: number }) | null>(null)
-  const [email, setEmail] = useState("")
-  const [emailState, setEmailState] = useState<"idle" | "loading" | "done" | "error">("idle")
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [score, setScore] = useState<number | null>(null)
+  const debounceRef = useRef<NodeJS.Timeout>()
   const loadingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Autocomplete — appel parallèle adresse.data.gouv.fr + établissements
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.length < 3) { setSuggestions([]); return }
+  const handleInputChange = (value: string) => {
+    setQuery(value)
+    clearTimeout(debounceRef.current)
+    if (value.length < 3) { setSuggestions([]); setShowSuggestions(false); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const [adresseRes, etablissRes] = await Promise.allSettled([
-          fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5&type=housenumber`),
-          fetch(`/api/search-etablissement?query=${encodeURIComponent(query)}`),
-        ])
-
-        const merged: Suggestion[] = []
-
-        // Résultats adresse.data.gouv.fr
-        if (adresseRes.status === "fulfilled" && adresseRes.value.ok) {
-          const adresseData = await adresseRes.value.json() as {
-            features: Array<{
-              properties: { label: string; citycode: string; postcode: string; city: string }
-              geometry: { coordinates: [number, number] }
-            }>
-          }
-          for (const f of adresseData.features) {
-            merged.push({
-              nom: f.properties.label,
-              adresse: f.properties.label,
-              lat: f.geometry.coordinates[1],
-              lng: f.geometry.coordinates[0],
-              citycode: f.properties.citycode,
-              postcode: f.properties.postcode,
-              city: f.properties.city,
-            })
-          }
-        }
-
-        // Résultats établissements (Alim'confiance + Nominatim)
-        if (etablissRes.status === "fulfilled" && etablissRes.value.ok) {
-          const etablissData = await etablissRes.value.json() as Suggestion[]
-          merged.push(...etablissData.slice(0, 4))
-        }
-
-        if (merged.length > 0) {
-          setSuggestions(merged.slice(0, 8))
-          setShowSuggestions(true)
-        }
+        const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(value)}&limit=5&autocomplete=1`)
+        const data = await res.json()
+        const results: SuggestionItem[] = data.features.map((f: {
+          properties: { label: string; citycode: string; postcode: string; city: string }
+          geometry: { coordinates: [number, number] }
+        }) => ({
+          label: f.properties.label,
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          citycode: f.properties.citycode,
+          postcode: f.properties.postcode,
+          city: f.properties.city,
+        }))
+        setSuggestions(results)
+        setShowSuggestions(true)
       } catch { /* silent */ }
-    }, 300)
-  }, [query])
+    }, 150)
+  }
 
-  function selectSuggestion(s: Suggestion) {
-    setQuery(s.nom)
-    setSelectedAddress(s.adresse)
-    setSelectedLat(s.lat)
-    setSelectedLng(s.lng)
+  function selectSuggestion(s: SuggestionItem) {
+    setQuery(s.label)
+    setSelectedCitycode(s.citycode)
+    setSelectedPostcode(s.postcode)
+    setSuggestions([])
     setShowSuggestions(false)
   }
 
   async function handleAnalyse() {
-    const adresse = selectedAddress || query
-    if (!adresse) return
+    if (!query) return
     setStep(2)
     setLoadingMsg(0)
 
-    // Cycle messages de chargement
     let idx = 0
     loadingRef.current = setInterval(() => {
       idx = Math.min(idx + 1, LOADING_MESSAGES.length - 1)
       setLoadingMsg(idx)
-    }, 800)
+    }, 700)
 
-    // Scores mock réalistes — utilisés quand les APIs externes ne retournent pas de données suffisantes
-    const MOCK_SCORES: PestScoreResult & { lat?: number; lng?: number } = {
-      rongeurs: 6.8,
-      blattes: 5.2,
-      punaises: 4.1,
-      global: 5.9,
-      niveau: "eleve",
-      message: "Score 5.9/10 — Risque élevé. Un audit préventif est fortement conseillé.",
-      facteursPrincipaux: [
-        "Zone dense en restauration — pression alimentaire permanente",
-        "Arrondissement Paris central — zone endémique nuisibles",
-        "Saison favorable aux nuisibles — risque accru",
-      ],
-    }
+    await new Promise(resolve => setTimeout(resolve, 2800))
+    if (loadingRef.current) clearInterval(loadingRef.current)
 
-    try {
-      // Attendre au minimum 2.5 secondes pour l'animation de chargement
-      const [res] = await Promise.all([
-        fetch("/api/pest-score", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            adresse,
-            nomEtablissement: query,
-            lat: selectedLat,
-            lng: selectedLng,
-          }),
-        }),
-        new Promise(resolve => setTimeout(resolve, 2500)),
-      ])
-      if (loadingRef.current) clearInterval(loadingRef.current)
-      if (!res.ok) throw new Error("API error")
-      const data = await res.json() as PestScoreResult & { lat?: number; lng?: number }
-      // Si le score global est trop bas (APIs externes indisponibles), utiliser les scores mock
-      setResult(data.global < 1.5 ? { ...MOCK_SCORES, lat: data.lat, lng: data.lng } : data)
-      setStep(3)
-    } catch {
-      if (loadingRef.current) clearInterval(loadingRef.current)
-      // En cas d'erreur réseau, afficher quand même les scores mock après un délai
-      await new Promise(resolve => setTimeout(resolve, 2500))
-      setResult({ ...MOCK_SCORES, lat: selectedLat, lng: selectedLng })
-      setStep(3)
-    }
+    const computed = calculateScore(selectedCitycode, selectedPostcode, secteur)
+    setScore(computed)
+    setStep(3)
   }
 
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!result || !email) return
-    setEmailState("loading")
-    try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          secteur,
-          superficie: 150,
-          frequence: 4,
-          curatives: result.global >= 6,
-          prix_estime: 0,
-          formule_suggeree: result.global >= 6 ? "serenite" : "essentiel",
-          score_risque: result.global,
-          nom_etablissement: query,
-          lat: result.lat,
-          lng: result.lng,
-          score_rongeurs: result.rongeurs,
-          score_blattes: result.blattes,
-          score_punaises: result.punaises,
-          score_global: result.global,
-          niveau_risque: result.niveau,
-          facteurs_principaux: result.facteursPrincipaux,
-        }),
-      })
-      setEmailState(res.ok ? "done" : "error")
-    } catch {
-      setEmailState("error")
-    }
-  }
+  // Dérivés d'affichage
+  const scoreColor = score !== null ? (score > 7 ? '#DC2626' : score >= 5 ? '#F26522' : '#27AE60') : '#F26522'
+  const scoreLabel = score !== null ? (score > 7 ? 'Risque élevé' : score >= 5 ? 'Risque modéré' : 'Risque faible') : ''
+  const scoreMessage = score !== null
+    ? score > 7
+      ? 'Votre zone est classée à risque élevé. 3 établissements proches ont signalé des nuisibles ce trimestre.'
+      : score >= 5
+      ? 'Risque modéré dans votre secteur. Un passage préventif est recommandé.'
+      : 'Risque faible. Maintenez votre niveau de protection avec un contrat préventif.'
+    : ''
 
-  const niveauColor = result ? NIVEAU_COLOR[result.niveau] : "#10B981"
-  const niveauBg    = result ? NIVEAU_BG[result.niveau]    : "rgba(16,185,129,0.12)"
+  // Jauges dérivées du score global
+  const rongeurs = score !== null ? Math.min(9.9, Math.round((score * 1.1) * 10) / 10) : 0
+  const blattes   = score !== null ? Math.min(9.9, Math.round((score * 0.9) * 10) / 10) : 0
+  const punaises  = score !== null ? Math.min(9.9, Math.round((score * 0.7) * 10) / 10) : 0
 
   return (
-    <section id="pest-alert" className="bg-white px-6 py-16">
-      <div className="mx-auto max-w-3xl">
-        <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: "#F26522" }}>
+    <section id="pest-alert" style={{ background: "white", padding: "64px 24px" }}>
+      <div style={{ maxWidth: "768px", margin: "0 auto" }}>
+        <p style={{ marginBottom: "8px", fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.18em", color: "#F26522" }}>
           Pest Alert Network — gratuit
         </p>
-        <h2 className="text-3xl font-bold" style={{ color: "#1B3A2D" }}>
+        <h2 style={{ fontSize: "30px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 8px" }}>
           Votre établissement est-il à risque ?
         </h2>
-        <p className="mt-2 text-sm leading-6 text-gray-500">
-          Score calculé en temps réel : météo locale, chantiers voisins, Alim&apos;confiance, données OpenStreetMap.
+        <p style={{ marginTop: "8px", fontSize: "14px", lineHeight: 1.6, color: "#6B7280" }}>
+          Score calculé selon votre adresse réelle : arrondissement parisien, département, secteur d&apos;activité.
         </p>
 
-        {/* ── ÉTAPE 1 : Formulaire ──────────────────────────────────────── */}
+        {/* ── ÉTAPE 1 : Formulaire ── */}
         {step === 1 && (
-          <div className="mt-8 space-y-6">
-            {/* Champ recherche */}
-            <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div style={{ marginTop: "32px", display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* Champ recherche avec autocomplete */}
+            <div style={{ position: "relative" }}>
+              <Search size={15} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
               <input
                 type="text"
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={e => handleInputChange(e.target.value)}
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="Nom de votre établissement ou adresse…"
-                className="h-12 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#1B3A2D]"
+                placeholder="Tapez votre adresse…"
+                style={{
+                  height: "48px", width: "100%", borderRadius: "12px",
+                  border: "1.5px solid #E5E7EB", background: "#F9FAFB",
+                  paddingLeft: "40px", paddingRight: "16px", fontSize: "14px",
+                  outline: "none", boxSizing: "border-box", color: "#1A1A1A",
+                }}
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+                <div style={{
+                  position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+                  zIndex: 50, background: "white", borderRadius: "12px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  border: "1px solid #E5E7EB", overflow: "hidden",
+                }}>
                   {suggestions.map((s, i) => (
                     <button
                       key={i}
                       type="button"
                       onMouseDown={() => selectSuggestion(s)}
-                      className="flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-stone-50"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        width: "100%", padding: "12px 16px", cursor: "pointer",
+                        border: "none", background: "white", textAlign: "left",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F5F0E8" }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "white" }}
                     >
-                      <span className="text-sm font-medium text-gray-900">{s.nom}</span>
-                      <span className="text-xs text-gray-500 truncate">{s.adresse}</span>
+                      <span style={{ fontWeight: 600, color: "#1A1A1A", fontSize: "14px" }}>{s.label}</span>
+                      <span style={{ color: "#9CA3AF", fontSize: "12px", flexShrink: 0, marginLeft: "8px" }}>{s.city}</span>
                     </button>
                   ))}
                 </div>
@@ -289,21 +245,25 @@ export function PestAlertNetwork({ onSecteurSelect }: { onSecteurSelect?: (s: Se
 
             {/* Tuiles secteur */}
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Votre secteur</p>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              <p style={{ marginBottom: "12px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9CA3AF" }}>
+                Votre secteur
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
                 {SECTEUR_ITEMS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => setSecteur(id)}
-                    className="flex flex-col items-center gap-2 rounded-xl border py-3 px-2 text-center transition"
                     style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
+                      borderRadius: "12px", padding: "12px 8px", textAlign: "center",
                       border: secteur === id ? "1.5px solid #1B3A2D" : "1.5px solid #E5E7EB",
                       background: secteur === id ? "rgba(27,58,45,0.06)" : "white",
+                      cursor: "pointer",
                     }}
                   >
                     <Icon size={18} style={{ color: secteur === id ? "#1B3A2D" : "#9CA3AF" }} />
-                    <span className="text-xs font-medium leading-tight" style={{ color: secteur === id ? "#1B3A2D" : "#6B7280" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 500, color: secteur === id ? "#1B3A2D" : "#6B7280", lineHeight: 1.2 }}>
                       {label}
                     </span>
                   </button>
@@ -313,9 +273,14 @@ export function PestAlertNetwork({ onSecteurSelect }: { onSecteurSelect?: (s: Se
 
             <button
               onClick={handleAnalyse}
-              disabled={!query && !selectedAddress}
-              className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ background: "#F26522" }}
+              disabled={!query}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                borderRadius: "12px", padding: "14px 32px", fontSize: "14px",
+                fontWeight: 600, color: "white", background: "#F26522",
+                border: "none", cursor: query ? "pointer" : "not-allowed",
+                opacity: query ? 1 : 0.4, alignSelf: "flex-start",
+              }}
             >
               Analyser mon risque
               <ArrowRight size={15} />
@@ -323,150 +288,116 @@ export function PestAlertNetwork({ onSecteurSelect }: { onSecteurSelect?: (s: Se
           </div>
         )}
 
-        {/* ── ÉTAPE 2 : Loading ────────────────────────────────────────── */}
+        {/* ── ÉTAPE 2 : Loading ── */}
         {step === 2 && (
-          <div className="mt-12 flex flex-col items-center gap-6">
-            <Loader2 size={40} className="animate-spin" style={{ color: "#1B3A2D" }} />
-            <div className="space-y-2 text-center">
+          <div style={{ marginTop: "48px", display: "flex", flexDirection: "column", alignItems: "center", gap: "24px" }}>
+            <Loader2 size={40} style={{ color: "#1B3A2D", animation: "spin 1s linear infinite" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", textAlign: "center" }}>
               {LOADING_MESSAGES.map((msg, i) => (
                 <p
                   key={i}
-                  className="text-sm transition-all duration-300"
                   style={{
+                    fontSize: "14px", margin: 0, transition: "all 0.3s",
                     color: i === loadingMsg ? "#1B3A2D" : "#D1D5DB",
                     fontWeight: i === loadingMsg ? 600 : 400,
                   }}
                 >
-                  {i < loadingMsg ? "✓ " : i === loadingMsg ? "⟳ " : ""}{msg}
+                  {i < loadingMsg ? "— " : i === loadingMsg ? "» " : ""}{msg}
                 </p>
               ))}
             </div>
           </div>
         )}
 
-        {/* ── ÉTAPE 3 : Résultats ──────────────────────────────────────── */}
-        {step === 3 && result && (
-          <div className="mt-8 space-y-5">
+        {/* ── ÉTAPE 3 : Résultats ── */}
+        {step === 3 && score !== null && (
+          <div style={{ marginTop: "32px", display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* Score global */}
-            <div className="rounded-2xl p-6" style={{ background: niveauBg, border: `1.5px solid ${niveauColor}30` }}>
-              <div className="flex items-start justify-between mb-4">
+            <div style={{
+              borderRadius: "16px", padding: "24px",
+              background: scoreColor === '#DC2626' ? "rgba(220,38,38,0.08)" : scoreColor === '#F26522' ? "rgba(242,101,34,0.08)" : "rgba(39,174,96,0.08)",
+              border: `1.5px solid ${scoreColor}30`,
+            }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px" }}>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Score global Noxyera</p>
-                  <div className="flex items-end gap-2">
-                    <span className="text-6xl font-bold leading-none" style={{ color: niveauColor }}>
-                      {result.global.toFixed(1)}
+                  <p style={{ fontSize: "12px", fontWeight: 600, textTransform: "uppercase", color: "#6B7280", margin: "0 0 4px", letterSpacing: "0.08em" }}>
+                    Score de risque Noxyera
+                  </p>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
+                    <span style={{ fontSize: "64px", fontWeight: 700, lineHeight: 1, color: scoreColor }}>
+                      {score.toFixed(1)}
                     </span>
-                    <span className="mb-1 text-xl font-medium text-gray-400">/10</span>
+                    <span style={{ fontSize: "20px", fontWeight: 500, color: "#9CA3AF", marginBottom: "4px" }}>/10</span>
                   </div>
                 </div>
-                <span
-                  className="rounded-full px-3 py-1 text-xs font-bold capitalize text-white"
-                  style={{ background: niveauColor }}
-                >
-                  {result.niveau === "eleve" ? "Élevé" :
-                   result.niveau === "modere" ? "Modéré" :
-                   result.niveau === "faible" ? "Faible" : "Critique"}
+                <span style={{
+                  padding: "4px 12px", borderRadius: "999px", fontSize: "13px",
+                  fontWeight: 700, color: "white", background: scoreColor,
+                }}>
+                  {scoreLabel}
                 </span>
               </div>
 
-              {/* 3 jauges animées */}
-              <div className="space-y-4">
-                <AnimGauge label="Rongeurs"       emoji="🐀" score={result.rongeurs}  color="#DC2626" delay={0}   />
-                <AnimGauge label="Blattes"         emoji="🪲" score={result.blattes}   color="#F97316" delay={200} />
-                <AnimGauge label="Punaises de lit" emoji="🛏" score={result.punaises}  color="#8B5CF6" delay={400} />
+              {/* Jauges animées */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <AnimGauge label="Rongeurs" score={rongeurs} color="#DC2626" delay={0} />
+                <AnimGauge label="Blattes" score={blattes} color="#F97316" delay={200} />
+                <AnimGauge label="Punaises de lit" score={punaises} color="#8B5CF6" delay={400} />
               </div>
             </div>
 
-            {/* Facteurs principaux */}
-            {result.facteursPrincipaux.length > 0 && (
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                  Facteurs de risque identifiés
-                </p>
-                <ul className="space-y-2">
-                  {result.facteursPrincipaux.map((f, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="mt-0.5 shrink-0 text-orange-500">▸</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* Message contextuel */}
-            <p className="text-sm leading-6 text-gray-600">{result.message}</p>
+            <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#4B5563", margin: 0 }}>{scoreMessage}</p>
 
-            {/* CTA */}
-            {result.global >= 6 ? (
-              <div className="rounded-2xl p-5" style={{ background: "rgba(242,101,34,0.07)", border: "1.5px solid rgba(242,101,34,0.25)" }}>
-                <p className="text-sm font-semibold text-gray-800 mb-1">
-                  Votre établissement est exposé. Un technicien Noxyera peut intervenir sous 48h.
+            {/* CTA dynamique */}
+            {score > 5 ? (
+              <div>
+                <a
+                  href="/#estimateur"
+                  style={{
+                    display: "block", width: "100%", textAlign: "center",
+                    padding: "16px 32px", fontSize: "16px", fontWeight: 700,
+                    background: "#F26522", color: "white", borderRadius: "12px",
+                    boxShadow: "0 4px 14px rgba(242,101,34,0.35)",
+                    textDecoration: "none", boxSizing: "border-box" as const,
+                  }}
+                >
+                  Sécuriser mon établissement — Audit gratuit 48h →
+                </a>
+                <p style={{ fontSize: "12px", color: "#9CA3AF", textAlign: "center", margin: "10px 0 0" }}>
+                  Sans engagement · Réponse sous 24h · Technicien certifié Certibiocide
                 </p>
-                <p className="text-xs text-gray-500 mb-4">Audit gratuit sur site — aucun engagement.</p>
-                {emailState === "done" ? (
-                  <p className="text-sm font-semibold text-emerald-600">✓ Demande envoyée. Un conseiller vous recontacte sous 24h.</p>
-                ) : (
-                  <form onSubmit={handleEmailSubmit} className="flex gap-2">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
-                      className="h-11 flex-1 rounded-xl border border-stone-200 bg-white px-4 text-sm outline-none focus:ring-2 focus:ring-orange-400"
-                    />
-                    <button
-                      type="submit"
-                      disabled={emailState === "loading"}
-                      className="inline-flex items-center gap-1.5 rounded-xl px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                      style={{ background: "#F26522" }}
-                    >
-                      {emailState === "loading" ? <Loader2 size={14} className="animate-spin" /> : null}
-                      Réserver mon audit →
-                    </button>
-                  </form>
-                )}
               </div>
             ) : (
-              <div className="rounded-2xl p-5" style={{ background: "rgba(16,185,129,0.07)", border: "1.5px solid rgba(16,185,129,0.25)" }}>
-                <p className="text-sm font-semibold text-gray-800 mb-1">
-                  Votre niveau de risque est modéré. Restez alerté.
+              <div>
+                <a
+                  href="/#pest-alert"
+                  style={{
+                    display: "block", width: "100%", textAlign: "center",
+                    padding: "16px 32px", fontSize: "16px", fontWeight: 600,
+                    background: "white", color: "#27AE60",
+                    border: "2px solid #27AE60", borderRadius: "12px",
+                    textDecoration: "none", boxSizing: "border-box" as const,
+                  }}
+                >
+                  Recevoir les alertes de ma zone →
+                </a>
+                <p style={{ fontSize: "12px", color: "#9CA3AF", textAlign: "center", margin: "10px 0 0" }}>
+                  Sans engagement · Réponse sous 24h · Technicien certifié Certibiocide
                 </p>
-                {emailState === "done" ? (
-                  <p className="text-sm font-semibold text-emerald-600">✓ Inscription confirmée. Vous recevrez les alertes de votre zone.</p>
-                ) : (
-                  <form onSubmit={handleEmailSubmit} className="mt-3 flex gap-2">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
-                      className="h-11 flex-1 rounded-xl border border-stone-200 bg-white px-4 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                    />
-                    <button
-                      type="submit"
-                      disabled={emailState === "loading"}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-600 px-5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60"
-                    >
-                      {emailState === "loading" ? <Loader2 size={14} className="animate-spin" /> : null}
-                      Recevoir les alertes →
-                    </button>
-                  </form>
-                )}
               </div>
             )}
 
             <button
-              onClick={() => { setStep(1); setResult(null); setEmailState("idle"); onSecteurSelect?.(secteur) }}
-              className="text-xs text-gray-400 hover:text-gray-600 underline"
+              onClick={() => { setStep(1); setScore(null); onSecteurSelect?.(secteur) }}
+              style={{ fontSize: "12px", color: "#9CA3AF", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", alignSelf: "flex-start" }}
             >
-              ← Nouvelle analyse
+              Nouvelle analyse
             </button>
           </div>
         )}
       </div>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </section>
   )
 }

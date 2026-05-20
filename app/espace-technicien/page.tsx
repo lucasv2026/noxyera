@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Wrench, AlertCircle, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, Wrench, AlertCircle, Loader2, ArrowRight, LockOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
 
@@ -107,7 +107,7 @@ export default function EspaceTechnicienPage() {
               gap: "10px",
             }}
           >
-            <span style={{ fontSize: "16px" }}>🔓</span>
+            <LockOpen size={16} style={{ color: "#92400E" }} />
             <div>
               <p style={{ fontSize: "13px", fontWeight: 600, color: "#92400E", margin: 0 }}>
                 Mode démo actif

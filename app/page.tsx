@@ -152,27 +152,32 @@ function HowItWorksSection() {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             {
-              num: "01", icon: Calendar,
+              index: 0, icon: Calendar,
               title: "Audit gratuit sous 48h",
               text: "Un technicien certifié Certibiocide vient sur site évaluer vos risques et proposer un plan adapté.",
             },
             {
-              num: "02", icon: ShieldCheck,
+              index: 1, icon: ShieldCheck,
               title: "Contrat annuel sur mesure",
               text: "Formule Essentiel ou Sérénité selon votre profil de risque — prix fixe, sans mauvaise surprise.",
             },
             {
-              num: "03", icon: FileText,
+              index: 2, icon: FileText,
               title: "Rapports disponibles en 1 clic",
               text: "HACCP, PMS, fiches biocides — tout est archivé et téléchargeable à tout moment depuis votre espace.",
             },
-          ].map(({ num, icon: Icon, title, text }) => (
-            <article key={num} className="relative rounded-2xl bg-white p-7 shadow-sm">
-              <div
-                className="mb-5 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ background: "#f97316" }}
-              >
-                {num}
+          ].map(({ index, icon: Icon, title, text }) => (
+            <article key={index} style={{ position: "relative" }} className="rounded-2xl bg-white p-7 shadow-sm">
+              {/* Badge numéroté */}
+              <div style={{
+                position: "absolute", top: "-12px", right: "-12px",
+                width: "40px", height: "40px", borderRadius: "50%",
+                backgroundColor: "#F26522", color: "white",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "16px", fontWeight: 700,
+                boxShadow: "0 2px 8px rgba(242, 101, 34, 0.4)",
+              }}>
+                {index + 1}
               </div>
               <div className="mb-4">
                 <Icon size={20} style={{ color: "#1b4332" }} />

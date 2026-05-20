@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { SUPABASE_DEMO_MISSIONS_TODAY } from "@/lib/demo-data"
+import { Check, MapPin } from "lucide-react"
 
 function ProgressBar({ step }: { step: number }) {
   const steps = ["Arrivée", "Inspection", "Produits", "Signature"]
@@ -20,7 +21,7 @@ function ProgressBar({ step }: { step: number }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "12px", fontWeight: 700,
             }}>
-              {isDone ? "✓" : idx + 1}
+              {isDone ? <Check size={12} /> : idx + 1}
             </div>
             <span style={{ fontSize: "10px", color: isActive ? "#F26522" : "#9CA3AF", fontWeight: isActive ? 700 : 400 }}>
               {label}
@@ -109,9 +110,10 @@ export default function ArriveeePage() {
           border: "none",
           cursor: "pointer",
           boxShadow: "0 4px 12px rgba(39,174,96,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
         }}
       >
-        📍 Je suis sur site
+        <MapPin size={16} /> Je suis sur site
       </button>
     </div>
   )

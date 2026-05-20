@@ -1,6 +1,6 @@
 "use client"
 
-import { Phone } from "lucide-react"
+import { Phone, Check, AlertTriangle } from "lucide-react"
 
 export default function TechnicienProfilPage() {
   return (
@@ -87,7 +87,9 @@ export default function TechnicienProfilPage() {
                     background: ok ? "#D1FAE5" : "#FEE2E2",
                     color: ok ? "#065F46" : "#991B1B",
                   }}>
-                    {ok ? "✓ Valide" : "⚠ Expiré"}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      {ok ? <Check size={12} /> : <AlertTriangle size={12} />} {ok ? "Valide" : "Expiré"}
+                    </span>
                   </span>
                 </div>
               ))}

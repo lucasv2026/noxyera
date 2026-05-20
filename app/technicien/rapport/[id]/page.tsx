@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Plus, Trash2, Camera, X, Lock, CheckCircle, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Camera, X, Lock, CheckCircle, Loader2, CheckCircle2, ChefHat, Home, Archive, Trees, Shirt, Trash, Layers, UtensilsCrossed, type LucideIcon } from "lucide-react"
 import dynamic from "next/dynamic"
 import type SignatureCanvas from "react-signature-canvas"
 import { SUPABASE_DEMO_MISSIONS_TODAY, SUPABASE_DEMO_TECH_PROFILE } from "@/lib/demo-data"
@@ -13,15 +13,15 @@ const SignaturePad = dynamic(
 )
 
 // ─── Zones ────────────────────────────────────────────────────────────────────
-const ZONES = [
-  { id: "cuisine",     label: "Cuisine",              icon: "🍳" },
-  { id: "cave",        label: "Cave / Sous-sol",       icon: "🏚️" },
-  { id: "reserves",    label: "Réserves",              icon: "📦" },
-  { id: "exterieurs",  label: "Extérieurs / Terrasse", icon: "🌿" },
-  { id: "vestiaires",  label: "Vestiaires",            icon: "👔" },
-  { id: "poubelles",   label: "Local poubelles",       icon: "🗑️" },
-  { id: "toiture",     label: "Toiture / Combles",     icon: "🏠" },
-  { id: "salle",       label: "Salle de restauration", icon: "🪑" },
+const ZONES: Array<{ id: string; label: string; Icon: LucideIcon }> = [
+  { id: "cuisine",     label: "Cuisine",              Icon: ChefHat },
+  { id: "cave",        label: "Cave / Sous-sol",       Icon: Home },
+  { id: "reserves",    label: "Réserves",              Icon: Archive },
+  { id: "exterieurs",  label: "Extérieurs / Terrasse", Icon: Trees },
+  { id: "vestiaires",  label: "Vestiaires",            Icon: Shirt },
+  { id: "poubelles",   label: "Local poubelles",       Icon: Trash },
+  { id: "toiture",     label: "Toiture / Combles",     Icon: Layers },
+  { id: "salle",       label: "Salle de restauration", Icon: UtensilsCrossed },
 ]
 
 interface Produit {
@@ -76,6 +76,15 @@ export default function RapportPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+
+  // Pré-remplissage depuis le dernier rapport
+  const dernierRapport = {
+    zones_traitees: ["cuisine", "cave", "reserves"],
+    produits_utilises: ["K-Othrine SC 7.5"],
+    date: new Date(Date.now() - 90 * 24 * 3600 * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
+  }
+  const [preRempli, setPreRempli] = useState(false)
+  const [bandeauVisible, setBandeauVisible] = useState(true)
 
   // État formulaire
   const [selectedZones, setSelectedZones] = useState<string[]>([])
@@ -207,7 +216,9 @@ export default function RapportPage({ params }: { params: { id: string } }) {
   if (success) {
     return (
       <div style={{ maxWidth: "600px", margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "56px", marginBottom: "16px" }}>✅</div>
+        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#D1FAE5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <CheckCircle2 size={32} style={{ color: "#059669" }} />
+        </div>
         <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 8px" }}>
           Rapport généré avec succès !
         </h2>
@@ -234,6 +245,37 @@ export default function RapportPage({ params }: { params: { id: string } }) {
       </div>
 
       <div style={{ height: "1px", background: "#E5E7EB", margin: "16px 0 24px" }} />
+
+      {/* Bandeau pré-remplissage */}
+      {bandeauVisible && !preRempli && (
+        <div style={{
+          backgroundColor: "#D1FAE5", borderRadius: "12px", padding: "12px 16px",
+          marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <span style={{ fontSize: "13px", color: "#065F46", fontWeight: 500 }}>
+            Données pré-chargées depuis le dernier passage du {dernierRapport.date}
+          </span>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => {
+                setSelectedZones(dernierRapport.zones_traitees)
+                setProduits([{ nom: dernierRapport.produits_utilises[0], autorisation: "", quantite: "", unite: "mL" }])
+                setPreRempli(true)
+                setBandeauVisible(false)
+              }}
+              style={{ fontSize: "12px", color: "#065F46", fontWeight: 700, background: "rgba(6,95,70,0.1)", border: "none", cursor: "pointer", borderRadius: "6px", padding: "4px 10px" }}
+            >
+              Pré-remplir
+            </button>
+            <button
+              onClick={() => setBandeauVisible(false)}
+              style={{ fontSize: "12px", color: "#6B7280", background: "none", border: "none", cursor: "pointer" }}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      )}
 
       <StepBar step={step} total={TOTAL_STEPS} />
 
@@ -265,7 +307,7 @@ export default function RapportPage({ params }: { params: { id: string } }) {
                     gap: "10px",
                   }}
                 >
-                  <span style={{ fontSize: "20px" }}>{z.icon}</span>
+                  <z.Icon size={18} style={{ color: selected ? "#1B3A2D" : "#9CA3AF", flexShrink: 0 }} />
                   <span style={{ fontSize: "13px", fontWeight: selected ? 700 : 400, color: selected ? "#1B3A2D" : "#374151" }}>
                     {z.label}
                   </span>

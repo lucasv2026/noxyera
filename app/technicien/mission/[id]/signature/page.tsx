@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { Check, Smartphone } from "lucide-react"
 
 function ProgressBar({ step }: { step: number }) {
   const steps = ["Arrivée", "Inspection", "Produits", "Signature"]
@@ -19,7 +20,7 @@ function ProgressBar({ step }: { step: number }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "12px", fontWeight: 700,
             }}>
-              {isDone ? "✓" : idx + 1}
+              {isDone ? <Check size={12} /> : idx + 1}
             </div>
             <span style={{ fontSize: "10px", color: isActive ? "#F26522" : "#9CA3AF", fontWeight: isActive ? 700 : 400 }}>
               {label}
@@ -66,7 +67,7 @@ export default function SignaturePage() {
           fontSize: "36px", margin: "0 auto 20px",
           animation: "pop 0.4s ease",
         }}>
-          ✓
+          <Check size={36} />
         </div>
         <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 8px" }}>
           Intervention clôturée !
@@ -130,9 +131,10 @@ export default function SignaturePage() {
           border: "none",
           cursor: "pointer",
           boxShadow: "0 4px 12px rgba(39,174,96,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
         }}
       >
-        📱 Clôturer l&apos;intervention
+        <Smartphone size={16} /> Clôturer l&apos;intervention
       </button>
     </div>
   )

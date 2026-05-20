@@ -95,6 +95,16 @@ export default function TarifsPage() {
           </p>
         </div>
 
+        {/* Section intro */}
+        <div style={{ textAlign: "center", padding: "48px 24px 32px", maxWidth: "640px", margin: "0 auto" }}>
+          <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 12px", fontFamily: "var(--font-display), serif" }}>
+            Deux formules, un seul objectif : votre conformité
+          </h2>
+          <p style={{ fontSize: "15px", color: "#6B7280", lineHeight: 1.7, margin: 0 }}>
+            Nous proposons deux niveaux de service selon votre profil de risque et la fréquence de contrôle de votre secteur. L&apos;estimateur ci-dessous calcule votre tarif exact en 60 secondes — sans engagement.
+          </p>
+        </div>
+
         {/* Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "768px", margin: "0 auto 64px" }}>
           {/* Essentiel */}
@@ -123,17 +133,19 @@ export default function TarifsPage() {
               disabled={loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                width: "100%", padding: "14px", borderRadius: "12px",
-                fontSize: "14px", fontWeight: 700,
-                background: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "#E5E7EB" : "#F26522",
-                color: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "#9CA3AF" : "white",
-                border: "none", cursor: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "not-allowed" : "pointer",
+                width: "100%", padding: "16px 40px", borderRadius: "12px",
+                fontSize: "16px", fontWeight: 700,
+                border: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "2px solid #E5E7EB" : "2px solid #1B3A2D",
+                color: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "#9CA3AF" : "#1B3A2D",
+                backgroundColor: "white",
+                cursor: loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "not-allowed" : "pointer",
                 transition: "opacity 0.15s",
               }}
             >
               {loadingPrice === STRIPE_PRICES.ESSENTIEL_ANNUEL ? "Chargement…" : "Souscrire Essentiel"}
               {loadingPrice !== STRIPE_PRICES.ESSENTIEL_ANNUEL && <ArrowRight size={15} />}
             </button>
+            <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "8px 0 0", textAlign: "center" }}>Sans engagement · Résiliation annuelle</p>
 
             <Link
               href="/#pest-alert"
@@ -171,15 +183,17 @@ export default function TarifsPage() {
               href="mailto:contact@noxyera.com"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                width: "100%", padding: "14px", borderRadius: "12px",
-                fontSize: "14px", fontWeight: 700, color: "white",
-                background: "#22C55E", boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
+                width: "100%", padding: "16px 40px", borderRadius: "12px",
+                fontSize: "16px", fontWeight: 700, color: "white",
+                backgroundColor: "#F26522", border: "none",
+                boxShadow: "0 4px 16px rgba(242,101,34,0.35)",
                 textDecoration: "none",
               }}
             >
               Parler à un expert
               <ArrowRight size={15} />
             </a>
+            <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", margin: "8px 0 0", textAlign: "center" }}>Sans engagement · Résiliation annuelle</p>
           </div>
         </div>
 

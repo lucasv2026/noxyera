@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, ShieldCheck, Clock, Download, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, ShieldCheck, Clock, Download, Users, Rat, Bug, ClipboardList, Zap, BedDouble, VolumeX, Camera, Trophy, Map, Package, BarChart2, RefreshCw, Factory, Pencil, FlaskConical, CheckSquare, type LucideIcon } from "lucide-react";
 import { MegaMenu } from "@/components/MegaMenu";
 
 const sectionStyle = (bg: string) => ({
@@ -84,10 +84,10 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-function FeatureCard({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
+function FeatureCard({ icon: Icon, title, desc }: { icon: LucideIcon; title: string; desc: string }) {
   return (
     <div style={cardStyle}>
-      <div style={{ fontSize: "24px", marginBottom: "10px" }}>{emoji}</div>
+      <div style={{ marginBottom: "10px" }}><Icon size={22} style={{ color: "#1B3A2D" }} /></div>
       <p style={{ fontSize: "14px", fontWeight: 700, color: "#1A1A1A", margin: "0 0 6px" }}>{title}</p>
       <p style={{ fontSize: "13px", color: "#6B7280", margin: 0, lineHeight: 1.5 }}>{desc}</p>
     </div>
@@ -153,10 +153,10 @@ export default function SuiviSanitairePage() {
             Noxyera vous protège avec un suivi adapté aux exigences DDPP.
           </p>
           <div style={cardGridStyle}>
-            <FeatureCard emoji="🐀" title="Contrôle rongeurs" desc="Pièges homologués et relevés mensuels documentés pour votre PMS." />
-            <FeatureCard emoji="🪲" title="Lutte contre les blattes" desc="Traitement gel certifié HACCP, sans interruption de service." />
-            <FeatureCard emoji="📋" title="Plan PMS inclus" desc="Mise à jour automatique de votre Plan de Maîtrise Sanitaire." />
-            <FeatureCard emoji="⚡" title="Intervention 24-48h" desc="Infestation détectée ? Un technicien intervient rapidement." />
+            <FeatureCard icon={Rat} title="Contrôle rongeurs" desc="Pièges homologués et relevés mensuels documentés pour votre PMS." />
+            <FeatureCard icon={Bug} title="Lutte contre les blattes" desc="Traitement gel certifié HACCP, sans interruption de service." />
+            <FeatureCard icon={ClipboardList} title="Plan PMS inclus" desc="Mise à jour automatique de votre Plan de Maîtrise Sanitaire." />
+            <FeatureCard icon={Zap} title="Intervention 24-48h" desc="Infestation détectée ? Un technicien intervient rapidement." />
           </div>
           <Link href="/tarifs" style={ctaButtonStyle}>
             Estimer mon tarif → <ArrowRight size={14} />
@@ -173,10 +173,10 @@ export default function SuiviSanitairePage() {
             Zéro perturbation pour vos clients, conformité totale pour votre établissement.
           </p>
           <div style={cardGridStyle}>
-            <FeatureCard emoji="🛏" title="Détection punaises de lit" desc="Inspection chien détecteur + traitement thermique certifié." />
-            <FeatureCard emoji="🔇" title="Intervention discrète" desc="Nos techniciens opèrent en dehors des heures d'occupation." />
-            <FeatureCard emoji="📸" title="Documentation photographique" desc="Photos des zones traitées dans chaque rapport PDF." />
-            <FeatureCard emoji="🏆" title="Certification affichable" desc="Badge Noxyera certifié pour rassurer vos voyageurs." />
+            <FeatureCard icon={BedDouble} title="Détection punaises de lit" desc="Inspection chien détecteur + traitement thermique certifié." />
+            <FeatureCard icon={VolumeX} title="Intervention discrète" desc="Nos techniciens opèrent en dehors des heures d'occupation." />
+            <FeatureCard icon={Camera} title="Documentation photographique" desc="Photos des zones traitées dans chaque rapport PDF." />
+            <FeatureCard icon={Trophy} title="Certification affichable" desc="Badge Noxyera certifié pour rassurer vos voyageurs." />
           </div>
           <Link href="/tarifs" style={ctaButtonStyle}>
             Estimer mon tarif → <ArrowRight size={14} />
@@ -193,10 +193,10 @@ export default function SuiviSanitairePage() {
             de marchandises et aux zones de stockage étendues.
           </p>
           <div style={cardGridStyle}>
-            <FeatureCard emoji="🗺" title="Cartographie des zones" desc="Plan de l'entrepôt avec localisation de chaque dispositif de contrôle." />
-            <FeatureCard emoji="📦" title="Zones de quai sécurisées" desc="Protection des zones de réception, vecteurs d'introduction nuisibles." />
-            <FeatureCard emoji="📊" title="Rapports IFS/BRC" desc="Documentation conforme aux standards internationaux de sécurité alimentaire." />
-            <FeatureCard emoji="🔄" title="Fréquence adaptable" desc="Passages hebdomadaires ou mensuels selon votre volume d'activité." />
+            <FeatureCard icon={Map} title="Cartographie des zones" desc="Plan de l'entrepôt avec localisation de chaque dispositif de contrôle." />
+            <FeatureCard icon={Package} title="Zones de quai sécurisées" desc="Protection des zones de réception, vecteurs d'introduction nuisibles." />
+            <FeatureCard icon={BarChart2} title="Rapports IFS/BRC" desc="Documentation conforme aux standards internationaux de sécurité alimentaire." />
+            <FeatureCard icon={RefreshCw} title="Fréquence adaptable" desc="Passages hebdomadaires ou mensuels selon votre volume d'activité." />
           </div>
           <Link href="/tarifs" style={ctaButtonStyle}>
             Estimer mon tarif → <ArrowRight size={14} />
@@ -213,10 +213,10 @@ export default function SuiviSanitairePage() {
             Noxyera fournit la documentation certifiée exigée par les auditeurs.
           </p>
           <div style={cardGridStyle}>
-            <FeatureCard emoji="🏭" title="Plan de lutte intégrée" desc="Stratégie IPM adaptée à chaque ligne de production." />
-            <FeatureCard emoji="📝" title="Traçabilité produits" desc="Numéros AMM de tous les biocides utilisés, archivés 10 ans." />
-            <FeatureCard emoji="🔬" title="Analyse des risques" desc="Évaluation HACCP dédiée aux risques de contamination nuisibles." />
-            <FeatureCard emoji="✅" title="Audit IFS/BRC prêt" desc="Rapport prêt pour vos audits de certification alimentaire." />
+            <FeatureCard icon={Factory} title="Plan de lutte intégrée" desc="Stratégie IPM adaptée à chaque ligne de production." />
+            <FeatureCard icon={Pencil} title="Traçabilité produits" desc="Numéros AMM de tous les biocides utilisés, archivés 10 ans." />
+            <FeatureCard icon={FlaskConical} title="Analyse des risques" desc="Évaluation HACCP dédiée aux risques de contamination nuisibles." />
+            <FeatureCard icon={CheckSquare} title="Audit IFS/BRC prêt" desc="Rapport prêt pour vos audits de certification alimentaire." />
           </div>
           <Link href="/tarifs" style={ctaButtonStyle}>
             Estimer mon tarif → <ArrowRight size={14} />
