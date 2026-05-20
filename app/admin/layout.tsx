@@ -1,5 +1,5 @@
-// TODO: Ajouter un auth guard ici — vérifier que l'utilisateur a le rôle "admin" avant d'afficher le layout.
-// Exemple : const { data: { user } } = await supabase.auth.getUser(); puis vérifier profile.role === 'admin'
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp } from "lucide-react";
 
@@ -12,7 +12,13 @@ const NAV = [
   { label: "Revenus", href: "/admin/revenus", icon: TrendingUp },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = cookies()
+  const adminSecret = cookieStore.get('admin_secret')?.value
+  if (adminSecret !== process.env.ADMIN_SECRET) {
+    redirect('/admin/login')
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "#0D1F17" }}>
       {/* Sidebar */}

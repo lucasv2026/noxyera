@@ -2,29 +2,56 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Bell, Wrench, Search, X, Menu } from "lucide-react";
+import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 const SECTEUR_ITEMS = [
-  { label: "Restauration", title: "Restauration & Brasseries", desc: "Conformité HACCP pour restaurants", href: "/suivi-sanitaire#restauration" },
-  { label: "Hôtellerie",   title: "Hôtellerie",                desc: "Gestion nuisibles pour hôtels",    href: "/suivi-sanitaire#hotellerie" },
-  { label: "Entrepôts",    title: "Entrepôts & Logistique",    desc: "Protection zones de stockage",      href: "/suivi-sanitaire#entrepots" },
-  { label: "Agroalimentaire", title: "Industrie agroalimentaire", desc: "Conformité sites de production", href: "/suivi-sanitaire#agroalimentaire" },
+  { icon: UtensilsCrossed, title: "Restauration & Brasseries", desc: "Conformité HACCP pour restaurants", href: "/suivi-sanitaire#restauration" },
+  { icon: Building2,       title: "Hôtellerie",                desc: "Gestion nuisibles pour hôtels",    href: "/suivi-sanitaire#hotellerie" },
+  { icon: Package,         title: "Entrepôts & Logistique",    desc: "Protection zones de stockage",      href: "/suivi-sanitaire#entrepots" },
+  { icon: Factory,         title: "Industrie agroalimentaire", desc: "Conformité sites de production",    href: "/suivi-sanitaire#agroalimentaire" },
 ];
 
 const SERVICE_ITEMS = [
-  { icon: "file",   title: "Rapport HACCP automatique", desc: "PDF horodaté après chaque passage",  href: "/suivi-sanitaire#rapport",    badge: null },
-  { icon: "bell",   title: "Pest Alert Score",           desc: "Score de risque en temps réel",      href: "/suivi-sanitaire#pest-alert", badge: null },
-  { icon: "wrench", title: "Techniciens certifiés",      desc: "Certibiocide & HACCP",               href: "/suivi-sanitaire#techniciens", badge: null },
-  { icon: "search", title: "Audit à distance",           desc: "Diagnostic visioconférence",          href: "/audit-distance",            badge: "Bêta" },
+  { icon: FileText,  title: "Rapport HACCP automatique", desc: "PDF horodaté après chaque passage",  href: "/suivi-sanitaire#rapport",     badge: null },
+  { icon: Activity,  title: "Pest Alert Score",           desc: "Score de risque en temps réel",      href: "/suivi-sanitaire#pest-alert",  badge: null },
+  { icon: Shield,    title: "Techniciens certifiés",      desc: "Certibiocide & HACCP",               href: "/suivi-sanitaire#techniciens", badge: null },
+  { icon: Search,    title: "Audit à distance",           desc: "Diagnostic visioconférence",          href: "/audit-distance",             badge: "Bêta" },
 ];
 
-function ServiceIcon({ icon }: { icon: string }) {
-  if (icon === "file")   return <FileText size={16} style={{ color: "#6B7280", flexShrink: 0, marginTop: "2px" }} />;
-  if (icon === "bell")   return <Bell size={16} style={{ color: "#6B7280", flexShrink: 0, marginTop: "2px" }} />;
-  if (icon === "wrench") return <Wrench size={16} style={{ color: "#6B7280", flexShrink: 0, marginTop: "2px" }} />;
-  if (icon === "search") return <Search size={16} style={{ color: "#6B7280", flexShrink: 0, marginTop: "2px" }} />;
-  return null;
+function DropdownItem({ icon: Icon, title, desc, href, badge }: {
+  icon: React.ElementType
+  title: string
+  desc: string
+  href: string
+  badge?: string | null
+}) {
+  return (
+    <Link
+      href={href}
+      style={{ display: "flex", gap: "12px", alignItems: "center", padding: "10px 12px", borderRadius: "8px", textDecoration: "none" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F5F0E8"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+    >
+      <div style={{
+        width: "40px", height: "40px", background: "#F5F0E8", borderRadius: "8px",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <Icon size={18} style={{ color: "#1B3A2D" }} />
+      </div>
+      <div>
+        <p style={{ fontSize: "14px", fontWeight: 700, color: "#1B3A2D", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+          {title}
+          {badge && (
+            <span style={{ fontSize: "10px", fontWeight: 700, background: "#F26522", color: "white", padding: "1px 6px", borderRadius: "6px" }}>
+              {badge}
+            </span>
+          )}
+        </p>
+        <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0" }}>{desc}</p>
+      </div>
+    </Link>
+  )
 }
 
 export function MegaMenu() {
@@ -114,69 +141,26 @@ export function MegaMenu() {
                   background: "white",
                   borderRadius: "16px",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                  padding: "24px",
-                  width: "480px",
+                  padding: "16px",
+                  width: "520px",
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "24px",
+                  gap: "4px",
                   zIndex: 100,
                 }}
               >
                 {/* Colonne Par secteur */}
-                <div>
-                  <p style={{ fontSize: "12px", textTransform: "uppercase", color: "#6B7280", fontWeight: 700, letterSpacing: "0.08em", marginBottom: "12px", margin: "0 0 12px" }}>
-                    Par secteur
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {SECTEUR_ITEMS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "8px 10px", borderRadius: "10px", textDecoration: "none" }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F5F0E8"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-                      >
-                        <span style={{ fontSize: "13px", fontWeight: 600, color: "#1B3A2D", padding: "2px 8px", borderRadius: "6px", background: "#F5F0E8", flexShrink: 0 }}>
-                          {item.label}
-                        </span>
-                        <div>
-                          <p style={{ fontSize: "13px", fontWeight: 700, color: "#1B3A2D", margin: 0 }}>{item.title}</p>
-                          <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0" }}>{item.desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {SECTEUR_ITEMS.map((item) => (
+                    <DropdownItem key={item.href} {...item} />
+                  ))}
                 </div>
 
                 {/* Colonne Nos services */}
-                <div>
-                  <p style={{ fontSize: "12px", textTransform: "uppercase", color: "#6B7280", fontWeight: 700, letterSpacing: "0.08em", margin: "0 0 12px" }}>
-                    Nos services
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {SERVICE_ITEMS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "8px 10px", borderRadius: "10px", textDecoration: "none" }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F5F0E8"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-                      >
-                        <ServiceIcon icon={item.icon} />
-                        <div>
-                          <p style={{ fontSize: "14px", fontWeight: 700, color: "#1B3A2D", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                            {item.title}
-                            {item.badge && (
-                              <span style={{ fontSize: "10px", fontWeight: 700, background: "#F26522", color: "white", padding: "1px 6px", borderRadius: "6px" }}>
-                                {item.badge}
-                              </span>
-                            )}
-                          </p>
-                          <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0" }}>{item.desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {SERVICE_ITEMS.map((item) => (
+                    <DropdownItem key={item.href} {...item} />
+                  ))}
                 </div>
               </div>
             )}
