@@ -7,7 +7,7 @@ import { RappelEmail } from '../emails/RappelEmail'
 import { AuditNotifEmail } from '../emails/AuditNotifEmail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = 'Noxyera <bonjour@noxyera.com>'
+const FROM = 'Noxyera <onboarding@resend.dev>'
 const ADMIN_EMAIL = 'lucas@agencenikita.com'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://noxyera.com'
 
