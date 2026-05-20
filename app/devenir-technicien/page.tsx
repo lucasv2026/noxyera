@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Smartphone, Wrench, Users, Euro, Shield, TrendingUp, CheckCircle, UserPlus } from 'lucide-react'
+import { Smartphone, Wrench, Users, Euro, Shield, TrendingUp, CheckCircle, UserPlus, Check, Star } from 'lucide-react'
 import { MegaMenu } from '@/components/MegaMenu'
 
 const inputStyle: React.CSSProperties = {
@@ -113,7 +113,7 @@ export default function DevenirTechnicienPage() {
             background: '#F5F0E8', color: '#1B3A2D', borderRadius: 20,
             padding: '6px 16px', fontSize: 13, fontWeight: 600, marginBottom: 28,
           }}>
-            🌿 Rejoignez notre réseau
+            Rejoignez notre réseau
           </div>
 
           <h1 style={{ fontSize: 'clamp(36px, 6vw, 60px)', fontWeight: 800, color: 'white', lineHeight: 1.1, margin: '0 0 24px' }}>
@@ -267,7 +267,7 @@ export default function DevenirTechnicienPage() {
                 'Capacité à travailler seul',
               ].map(item => (
                 <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <span style={{ color: '#22C55E', fontSize: 18, fontWeight: 700 }}>✓</span>
+                  <Check size={16} color="#22C55E" />
                   <span style={{ fontSize: 15, color: '#1A1A1A' }}>{item}</span>
                 </div>
               ))}
@@ -283,7 +283,7 @@ export default function DevenirTechnicienPage() {
                 'Réseau pro dans le secteur',
               ].map(item => (
                 <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <span style={{ color: '#F26522', fontSize: 18 }}>★</span>
+                  <Star size={14} color="#F26522" fill="#F26522" />
                   <span style={{ fontSize: 15, color: '#1A1A1A' }}>{item}</span>
                 </div>
               ))}

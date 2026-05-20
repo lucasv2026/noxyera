@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, UserPlus, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 
+
 const SECTEUR_ITEMS = [
   { icon: UtensilsCrossed, title: "Restauration & Brasseries", desc: "Conformité HACCP pour restaurants", href: "/suivi-sanitaire#restauration" },
   { icon: Building2,       title: "Hôtellerie",                desc: "Gestion nuisibles pour hôtels",    href: "/suivi-sanitaire#hotellerie" },
@@ -58,7 +59,6 @@ export function MegaMenu() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
-  const [activeMode, setActiveMode] = useState<"client" | "technicien">("client");
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleDropdownEnter = () => {
@@ -190,46 +190,40 @@ export function MegaMenu() {
 
         {/* Desktop — boutons droits */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }} className="hide-mobile">
-          {/* Toggle Client / Technicien */}
-          <div style={{
-            display: "flex", gap: "0", borderRadius: "20px",
-            border: "1px solid rgba(255,255,255,0.2)", overflow: "hidden",
-            marginRight: "8px",
-          }}>
-            {[
-              { id: "client" as const,     label: "Mon établissement",   href: null },
-              { id: "technicien" as const, label: "Je suis technicien",  href: "/espace-technicien" },
-            ].map(pill => (
-              <button
-                key={pill.id}
-                onClick={() => {
-                  setActiveMode(pill.id);
-                  if (pill.href) window.location.href = pill.href;
-                }}
-                style={{
-                  padding: "6px 14px", fontSize: "12px", fontWeight: 500,
-                  backgroundColor: activeMode === pill.id ? "rgba(255,255,255,0.15)" : "transparent",
-                  color: activeMode === pill.id ? "white" : "rgba(255,255,255,0.6)",
-                  border: "none", cursor: "pointer", whiteSpace: "nowrap" as const,
-                  transition: "all 0.15s",
-                }}
-              >
-                {pill.label}
-              </button>
-            ))}
-          </div>
-
           <Link
-            href="/espace-technicien"
-            style={{ border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 500, textDecoration: "none" }}
+            href="/#estimateur"
+            style={{
+              border: "1.5px solid white",
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: "20px",
+              fontSize: "13px",
+              fontWeight: 500,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.15)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
           >
-            Techniciens
+            Vous cherchez la conformité ?
           </Link>
           <Link
-            href="/login"
-            style={{ background: "#F26522", color: "white", padding: "8px 16px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}
+            href="/devenir-technicien"
+            style={{
+              background: "#F26522",
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: "20px",
+              fontSize: "13px",
+              fontWeight: 500,
+              textDecoration: "none",
+              border: "none",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#d4551c"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F26522"; }}
           >
-            Accès Client
+            Vous êtes technicien ?
           </Link>
         </div>
 
@@ -281,8 +275,6 @@ export function MegaMenu() {
           {[
             { label: "Tarifs", href: "/tarifs" },
             { label: "Blog", href: "/blog" },
-            { label: "Techniciens", href: "/espace-technicien" },
-            { label: "Devenir technicien", href: "/devenir-technicien" },
           ].map(({ label, href }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} style={{ display: "block", padding: "12px 0", color: "rgba(255,255,255,0.85)", fontSize: "15px", fontWeight: 500, textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               {label}
@@ -290,11 +282,27 @@ export function MegaMenu() {
           ))}
 
           <Link
-            href="/login"
+            href="/#estimateur"
             onClick={() => setMobileOpen(false)}
-            style={{ display: "block", marginTop: "16px", textAlign: "center", background: "#F26522", color: "white", padding: "12px", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}
+            style={{
+              display: "block", marginTop: "16px", textAlign: "center",
+              border: "1.5px solid white", color: "white", padding: "12px",
+              borderRadius: "20px", fontSize: "14px", fontWeight: 500, textDecoration: "none",
+            }}
           >
-            Accès Client
+            Vous cherchez la conformité ?
+          </Link>
+          <Link
+            href="/devenir-technicien"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              display: "block", marginTop: "10px", textAlign: "center",
+              background: "#F26522", color: "white", padding: "12px",
+              borderRadius: "20px", fontSize: "14px", fontWeight: 500, textDecoration: "none",
+              border: "none",
+            }}
+          >
+            Vous êtes technicien ?
           </Link>
         </div>
       )}
