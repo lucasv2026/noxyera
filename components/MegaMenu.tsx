@@ -125,11 +125,23 @@ function SpaceToggle({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
+function useNavSpace() {
+  const pathname = usePathname();
+  const isTechnicien =
+    pathname === "/techniciens" ||
+    pathname.startsWith("/technicien/") ||
+    pathname === "/technicien" ||
+    pathname === "/devenir-technicien" ||
+    pathname.startsWith("/devenir-technicien/");
+  return isTechnicien ? "technicien" : "client";
+}
+
 export function MegaMenu() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const navSpace = useNavSpace();
 
   const handleDropdownEnter = () => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -264,46 +276,49 @@ export function MegaMenu() {
           </Link>
         </nav>
 
-        {/* Desktop — boutons droits */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }} className="hide-mobile">
-          <Link
-            href="/login"
-            style={{
-              border: "1.5px solid rgba(255,255,255,0.7)",
-              background: "transparent",
-              color: "white",
-              padding: "8px 18px",
-              borderRadius: 20,
-              fontSize: 13,
-              fontWeight: 500,
-              textDecoration: "none",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.15)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-          >
-            Accès Client
-          </Link>
-          <Link
-            href="/espace-technicien"
-            style={{
-              background: "#F26522",
-              color: "white",
-              padding: "8px 18px",
-              borderRadius: 20,
-              fontSize: 13,
-              fontWeight: 500,
-              textDecoration: "none",
-              border: "none",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#d4551c"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F26522"; }}
-          >
-            Espace Technicien
-          </Link>
+        {/* Desktop — bouton droit conditionnel */}
+        <div style={{ display: "flex", alignItems: "center" }} className="hide-mobile">
+          {navSpace === "technicien" ? (
+            <Link
+              href="/espace-technicien"
+              style={{
+                background: "#F26522",
+                color: "white",
+                padding: "8px 18px",
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: "none",
+                border: "none",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#d4551c"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F26522"; }}
+            >
+              Espace Technicien
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              style={{
+                border: "1.5px solid rgba(255,255,255,0.7)",
+                background: "transparent",
+                color: "white",
+                padding: "8px 18px",
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: "none",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.15)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+            >
+              Accès Client
+            </Link>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -364,31 +379,34 @@ export function MegaMenu() {
             </Link>
           ))}
 
-          <Link
-            href="/login"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: "block", marginTop: "16px", textAlign: "center",
-              border: "1.5px solid rgba(255,255,255,0.7)", background: "transparent",
-              color: "white", padding: "12px",
-              borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
-              cursor: "pointer",
-            }}
-          >
-            Accès Client
-          </Link>
-          <Link
-            href="/espace-technicien"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: "block", marginTop: "10px", textAlign: "center",
-              background: "#F26522", color: "white", padding: "12px",
-              borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
-              border: "none", cursor: "pointer",
-            }}
-          >
-            Espace Technicien
-          </Link>
+          {navSpace === "technicien" ? (
+            <Link
+              href="/espace-technicien"
+              onClick={() => setMobileOpen(false)}
+              style={{
+                display: "block", marginTop: "16px", textAlign: "center",
+                background: "#F26522", color: "white", padding: "12px",
+                borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
+                border: "none", cursor: "pointer",
+              }}
+            >
+              Espace Technicien
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMobileOpen(false)}
+              style={{
+                display: "block", marginTop: "16px", textAlign: "center",
+                border: "1.5px solid rgba(255,255,255,0.7)", background: "transparent",
+                color: "white", padding: "12px",
+                borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
+                cursor: "pointer",
+              }}
+            >
+              Accès Client
+            </Link>
+          )}
         </div>
       )}
 
