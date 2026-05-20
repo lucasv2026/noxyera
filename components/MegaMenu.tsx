@@ -159,92 +159,93 @@ export function MegaMenu() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 24px",
+          position: "relative",
         }}
       >
-        {/* Zone gauche — Logo */}
-        <div style={{ flexShrink: 0 }}>
+        {/* Zone gauche — Logo + liens nav */}
+        <div style={{ display: "flex", alignItems: "center", gap: "32px", flexShrink: 0 }}>
           <Logo dark />
-        </div>
 
-        {/* Zone centre — liens nav + toggle pills */}
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "32px",
-          }}
-          className="hide-mobile"
-        >
-          {/* Suivi sanitaire avec dropdown */}
-          <div
-            style={{ position: "relative" }}
-            onMouseEnter={handleDropdownEnter}
-            onMouseLeave={handleDropdownLeave}
-          >
-            <button
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "8px 0",
-              }}
+          {/* Liens nav */}
+          <nav style={{ display: "flex", alignItems: "center", gap: "28px" }} className="hide-mobile">
+            {/* Suivi sanitaire avec dropdown */}
+            <div
+              style={{ position: "relative" }}
+              onMouseEnter={handleDropdownEnter}
+              onMouseLeave={handleDropdownLeave}
             >
-              Suivi sanitaire
-              <span style={{ fontSize: "10px", opacity: 0.7 }}>▾</span>
-            </button>
-
-            {dropdownOpen && (
-              <div
-                onMouseEnter={handleDropdownEnter}
-                onMouseLeave={handleDropdownLeave}
+              <button
                 style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  left: "0",
-                  background: "white",
-                  borderRadius: "16px",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                  padding: "16px",
-                  width: "520px",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "4px",
-                  zIndex: 100,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  padding: "8px 0",
                 }}
               >
-                {/* Colonne Par secteur */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {SECTEUR_ITEMS.map((item) => (
-                    <DropdownItem key={item.href} {...item} />
-                  ))}
+                Suivi sanitaire
+                <span style={{ fontSize: "10px", opacity: 0.7 }}>▾</span>
+              </button>
+
+              {dropdownOpen && (
+                <div
+                  onMouseEnter={handleDropdownEnter}
+                  onMouseLeave={handleDropdownLeave}
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    left: "0",
+                    background: "white",
+                    borderRadius: "16px",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                    padding: "16px",
+                    width: "520px",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "4px",
+                    zIndex: 100,
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    {SECTEUR_ITEMS.map((item) => (
+                      <DropdownItem key={item.href} {...item} />
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    {SERVICE_ITEMS.map((item) => (
+                      <DropdownItem key={item.href} {...item} />
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
 
-                {/* Colonne Nos services */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  {SERVICE_ITEMS.map((item) => (
-                    <DropdownItem key={item.href} {...item} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            <Link href="/tarifs" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
+              Tarifs
+            </Link>
+            <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
+              Blog
+            </Link>
+          </nav>
+        </div>
 
-          <Link href="/tarifs" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
-            Tarifs
-          </Link>
-          <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
-            Blog
-          </Link>
-
-          {/* Toggle pills — dans le flux, après les liens */}
+        {/* Toggle centré absolument */}
+        <div
+          className="hide-mobile"
+          style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+            pointerEvents: "auto",
+          }}
+        >
           <SpaceToggle />
-        </nav>
+        </div>
 
         {/* Zone droite — bouton CTA unique */}
         <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }} className="hide-mobile">
