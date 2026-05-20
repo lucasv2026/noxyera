@@ -191,39 +191,42 @@ export function MegaMenu() {
         {/* Desktop — boutons droits */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }} className="hide-mobile">
           <Link
-            href="/#estimateur"
+            href="/login"
             style={{
-              border: "1.5px solid white",
+              border: "1.5px solid rgba(255,255,255,0.7)",
+              background: "transparent",
               color: "white",
-              padding: "8px 16px",
-              borderRadius: "20px",
-              fontSize: "13px",
+              padding: "8px 18px",
+              borderRadius: 20,
+              fontSize: 13,
               fontWeight: 500,
               textDecoration: "none",
+              cursor: "pointer",
               whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.15)"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
           >
-            Vous cherchez la conformité ?
+            Accès Client
           </Link>
           <Link
-            href="/devenir-technicien"
+            href="/espace-technicien"
             style={{
               background: "#F26522",
               color: "white",
-              padding: "8px 16px",
-              borderRadius: "20px",
-              fontSize: "13px",
+              padding: "8px 18px",
+              borderRadius: 20,
+              fontSize: 13,
               fontWeight: 500,
               textDecoration: "none",
               border: "none",
+              cursor: "pointer",
               whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#d4551c"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F26522"; }}
           >
-            Vous êtes technicien ?
+            Espace Technicien
           </Link>
         </div>
 
@@ -282,27 +285,29 @@ export function MegaMenu() {
           ))}
 
           <Link
-            href="/#estimateur"
+            href="/login"
             onClick={() => setMobileOpen(false)}
             style={{
               display: "block", marginTop: "16px", textAlign: "center",
-              border: "1.5px solid white", color: "white", padding: "12px",
-              borderRadius: "20px", fontSize: "14px", fontWeight: 500, textDecoration: "none",
+              border: "1.5px solid rgba(255,255,255,0.7)", background: "transparent",
+              color: "white", padding: "12px",
+              borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
+              cursor: "pointer",
             }}
           >
-            Vous cherchez la conformité ?
+            Accès Client
           </Link>
           <Link
-            href="/devenir-technicien"
+            href="/espace-technicien"
             onClick={() => setMobileOpen(false)}
             style={{
               display: "block", marginTop: "10px", textAlign: "center",
               background: "#F26522", color: "white", padding: "12px",
-              borderRadius: "20px", fontSize: "14px", fontWeight: 500, textDecoration: "none",
-              border: "none",
+              borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
+              border: "none", cursor: "pointer",
             }}
           >
-            Vous êtes technicien ?
+            Espace Technicien
           </Link>
         </div>
       )}
