@@ -172,13 +172,17 @@ export function MegaMenu() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 24px",
+          position: "relative",
         }}
       >
         {/* Logo */}
         <Logo dark />
 
-        {/* Desktop toggle — centré */}
-        <div style={{ flex: 1, display: "flex", justifyContent: "center" }} className="hide-mobile">
+        {/* Desktop toggle — centré absolument */}
+        <div
+          style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
+          className="hide-mobile"
+        >
           <SpaceToggle />
         </div>
 
@@ -270,9 +274,6 @@ export function MegaMenu() {
           </Link>
           <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
             Blog
-          </Link>
-          <Link href="/devenir-technicien" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
-            Techniciens
           </Link>
         </nav>
 
