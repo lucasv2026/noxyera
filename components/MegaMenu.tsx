@@ -58,60 +58,52 @@ function DropdownItem({ icon: Icon, title, desc, href, badge }: {
 
 function SpaceToggle({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
-
-  const isClient =
-    pathname === "/" ||
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/suivi") ||
-    pathname.startsWith("/tarifs") ||
-    pathname.startsWith("/audit") ||
-    pathname.startsWith("/blog");
-
-  const isTechnicien =
-    pathname === "/techniciens" ||
-    pathname.startsWith("/technicien") ||
-    pathname.startsWith("/devenir-technicien");
+  const isTechnicien = pathname.startsWith("/technicien");
 
   const activePill: React.CSSProperties = {
     background: "white",
     color: "#1B3A2D",
     fontWeight: 600,
-    borderRadius: 22,
-    padding: "7px 20px",
-    fontSize: 14,
+    borderRadius: 999,
+    padding: "7px 18px",
+    fontSize: 13,
     cursor: "pointer",
     border: "none",
-    transition: "all 0.2s",
     flex: mobile ? 1 : undefined,
     textAlign: mobile ? "center" : undefined,
     whiteSpace: "nowrap",
+    textDecoration: "none",
+    display: mobile ? "block" : "inline-block",
   };
 
   const inactivePill: React.CSSProperties = {
     background: "transparent",
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.8)",
     fontWeight: 400,
-    borderRadius: 22,
-    padding: "7px 20px",
-    fontSize: 14,
+    borderRadius: 999,
+    padding: "7px 18px",
+    fontSize: 13,
     cursor: "pointer",
     border: "none",
     flex: mobile ? 1 : undefined,
     textAlign: mobile ? "center" : undefined,
     whiteSpace: "nowrap",
+    textDecoration: "none",
+    display: mobile ? "block" : "inline-block",
   };
 
   return (
     <div style={{
       display: "flex",
-      background: "rgba(255,255,255,0.15)",
-      borderRadius: 25,
+      background: "rgba(255,255,255,0.12)",
+      borderRadius: 999,
       padding: 3,
+      gap: 2,
       width: mobile ? "100%" : undefined,
     }}>
       <Link
         href="/"
-        style={isClient ? activePill : inactivePill}
+        style={!isTechnicien ? activePill : inactivePill}
       >
         Espace client
       </Link>
@@ -127,12 +119,7 @@ function SpaceToggle({ mobile = false }: { mobile?: boolean }) {
 
 function useNavSpace() {
   const pathname = usePathname();
-  const isTechnicien =
-    pathname === "/techniciens" ||
-    pathname.startsWith("/technicien/") ||
-    pathname === "/technicien" ||
-    pathname === "/devenir-technicien" ||
-    pathname.startsWith("/devenir-technicien/");
+  const isTechnicien = pathname.startsWith("/technicien");
   return isTechnicien ? "technicien" : "client";
 }
 
@@ -172,21 +159,14 @@ export function MegaMenu() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 24px",
-          position: "relative",
         }}
       >
-        {/* Logo */}
-        <Logo dark />
-
-        {/* Desktop toggle — centré absolument */}
-        <div
-          style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
-          className="hide-mobile"
-        >
-          <SpaceToggle />
+        {/* Zone gauche — Logo */}
+        <div style={{ flexShrink: 0 }}>
+          <Logo dark />
         </div>
 
-        {/* Desktop nav — centre-gauche */}
+        {/* Zone centre — liens nav + toggle pills */}
         <nav
           style={{
             display: "flex",
@@ -208,7 +188,7 @@ export function MegaMenu() {
                 cursor: "pointer",
                 fontSize: "14px",
                 fontWeight: 500,
-                color: "rgba(255,255,255,0.85)",
+                color: "white",
                 display: "flex",
                 alignItems: "center",
                 gap: "5px",
@@ -251,51 +231,38 @@ export function MegaMenu() {
                     <DropdownItem key={item.href} {...item} />
                   ))}
                 </div>
-
-                {/* Séparateur + Devenir technicien */}
-                <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #E5E7EB", marginTop: "8px", paddingTop: "12px" }}>
-                  <p style={{ fontSize: "11px", textTransform: "uppercase", color: "#6B7280", fontWeight: 700, letterSpacing: "0.08em", margin: "0 12px 6px" }}>
-                    Vous êtes technicien ?
-                  </p>
-                  <DropdownItem
-                    icon={UserPlus}
-                    title="Devenir technicien"
-                    desc="Rejoignez notre réseau"
-                    href="/devenir-technicien"
-                    badge="On recrute"
-                  />
-                </div>
               </div>
             )}
           </div>
 
-          <Link href="/tarifs" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
+          <Link href="/tarifs" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
             Tarifs
           </Link>
-          <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
+          <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "white", textDecoration: "none" }}>
             Blog
           </Link>
+
+          {/* Toggle pills — dans le flux, après les liens */}
+          <SpaceToggle />
         </nav>
 
-        {/* Desktop — bouton droit conditionnel */}
-        <div style={{ display: "flex", alignItems: "center" }} className="hide-mobile">
+        {/* Zone droite — bouton CTA unique */}
+        <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }} className="hide-mobile">
           {navSpace === "technicien" ? (
             <Link
               href="/espace-technicien"
               style={{
                 background: "#F26522",
                 color: "white",
-                padding: "8px 18px",
+                padding: "9px 20px",
                 borderRadius: 20,
                 fontSize: 13,
-                fontWeight: 500,
+                fontWeight: 600,
                 textDecoration: "none",
                 border: "none",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#d4551c"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F26522"; }}
             >
               Espace Technicien
             </Link>
@@ -303,19 +270,17 @@ export function MegaMenu() {
             <Link
               href="/login"
               style={{
-                border: "1.5px solid rgba(255,255,255,0.7)",
-                background: "transparent",
+                background: "#F26522",
                 color: "white",
-                padding: "8px 18px",
+                padding: "9px 20px",
                 borderRadius: 20,
                 fontSize: 13,
-                fontWeight: 500,
+                fontWeight: 600,
                 textDecoration: "none",
+                border: "none",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.15)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
             >
               Accès Client
             </Link>
@@ -336,10 +301,11 @@ export function MegaMenu() {
       {/* Mobile panel */}
       {mobileOpen && (
         <div style={{ position: "absolute", top: "64px", left: 0, right: 0, background: "#1B3A2D", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "16px 24px", zIndex: 99 }}>
-          {/* Mobile toggle */}
+          {/* Toggle pills en haut du drawer */}
           <div style={{ marginBottom: 16 }}>
             <SpaceToggle mobile />
           </div>
+
           {/* Suivi sanitaire accordion */}
           <button
             onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
@@ -380,6 +346,7 @@ export function MegaMenu() {
             </Link>
           ))}
 
+          {/* Bouton CTA en bas du drawer */}
           {navSpace === "technicien" ? (
             <Link
               href="/espace-technicien"
@@ -387,7 +354,7 @@ export function MegaMenu() {
               style={{
                 display: "block", marginTop: "16px", textAlign: "center",
                 background: "#F26522", color: "white", padding: "12px",
-                borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
+                borderRadius: 20, fontSize: 13, fontWeight: 600, textDecoration: "none",
                 border: "none", cursor: "pointer",
               }}
             >
@@ -399,10 +366,9 @@ export function MegaMenu() {
               onClick={() => setMobileOpen(false)}
               style={{
                 display: "block", marginTop: "16px", textAlign: "center",
-                border: "1.5px solid rgba(255,255,255,0.7)", background: "transparent",
-                color: "white", padding: "12px",
-                borderRadius: 20, fontSize: 13, fontWeight: 500, textDecoration: "none",
-                cursor: "pointer",
+                background: "#F26522", color: "white", padding: "12px",
+                borderRadius: 20, fontSize: 13, fontWeight: 600, textDecoration: "none",
+                border: "none", cursor: "pointer",
               }}
             >
               Accès Client
