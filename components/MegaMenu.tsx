@@ -186,6 +186,9 @@ export function MegaMenu() {
           <Link href="/blog" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
             Blog
           </Link>
+          <Link href="/devenir-technicien" style={{ fontSize: "14px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none" }}>
+            Techniciens
+          </Link>
         </nav>
 
         {/* Desktop — boutons droits */}

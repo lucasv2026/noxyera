@@ -83,7 +83,7 @@ function HeroSection() {
             style={{ aspectRatio: "4/3" }}
           >
             <Image
-              src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=900&q=85"
+              src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200"
               alt="Restaurant professionnel"
               fill
               className="object-cover"
@@ -102,7 +102,6 @@ function HeroSection() {
               </div>
               <div>
                 <p className="text-xs font-semibold" style={{ color: "#1b4332" }}>Rapport HACCP généré</p>
-                <p className="text-xs" style={{ color: "#6b7280" }}>Brasserie Voltaire · conforme</p>
               </div>
             </div>
           </div>
