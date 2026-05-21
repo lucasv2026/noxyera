@@ -4,20 +4,24 @@ import Link from "next/link";
 import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck } from "lucide-react";
 
 const NAV = [
-  { label: "Vue d'ensemble", href: "/admin", icon: LayoutDashboard },
-  { label: "Clients", href: "/admin/clients", icon: Users },
-  { label: "Techniciens", href: "/admin/techniciens", icon: Wrench },
-  { label: "Candidatures", href: "/admin/candidatures", icon: ClipboardList },
+  { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
+  { label: "File d'attente", href: "/admin/queue", icon: ClipboardList },
+  { label: "Clients CRM", href: "/admin/clients", icon: Users },
   { label: "Audits", href: "/admin/audits", icon: SearchCheck },
-  { label: "Leads & clients", href: "/admin/leads", icon: Target },
   { label: "Planning", href: "/admin/planning", icon: Calendar },
-  { label: "Revenus", href: "/admin/revenus", icon: TrendingUp },
+  { label: "Facturation", href: "/admin/facturation", icon: TrendingUp },
+  { label: "Candidatures", href: "/admin/candidatures", icon: Wrench },
+  { label: "Leads", href: "/admin/leads", icon: Target },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
-  const adminSecret = cookieStore.get('admin_secret')?.value
-  if (adminSecret !== process.env.ADMIN_SECRET) {
+  const adminSession = cookieStore.get('admin_session')?.value
+  // fallback: aussi accepter l'ancien cookie admin_secret
+  const adminSecretOld = cookieStore.get('admin_secret')?.value
+  const validSecret = process.env.ADMIN_PASSWORD || process.env.ADMIN_SECRET
+
+  if (!validSecret || (adminSession !== validSecret && adminSecretOld !== validSecret)) {
     redirect('/admin/login')
   }
 
@@ -44,7 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#10B981" }} />
           <span className="text-xs font-medium" style={{ color: "#10B981", fontFamily: "monospace" }}>
-            En direct · 23 techs actifs
+            En direct
           </span>
         </div>
 
@@ -71,7 +75,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
             <div>
               <p className="text-xs font-medium text-white">Administrateur</p>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>admin@noxyera.com</p>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{process.env.ADMIN_EMAIL ?? 'admin@noxyera.com'}</p>
             </div>
           </div>
           <Link

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Building2, Factory, FileText, Menu, Package, Search, Shield, UtensilsCrossed, UserPlus, X } from "lucide-react";
+import { Activity, Building2, Factory, FileText, Menu, Package, Shield, UtensilsCrossed, UserPlus, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 
@@ -18,7 +18,6 @@ const SERVICE_ITEMS = [
   { icon: FileText,  title: "Rapport HACCP automatique", desc: "PDF horodaté après chaque passage",  href: "/suivi-sanitaire#rapport",     badge: null },
   { icon: Activity,  title: "Pest Alert Score",           desc: "Score de risque en temps réel",      href: "/suivi-sanitaire#pest-alert",  badge: null },
   { icon: Shield,    title: "Techniciens certifiés",      desc: "Certibiocide & HACCP",               href: "/suivi-sanitaire#techniciens", badge: null },
-  { icon: Search,    title: "Audit à distance",           desc: "Diagnostic visioconférence",          href: "/audit-distance",             badge: "Bêta" },
 ];
 
 function DropdownItem({ icon: Icon, title, desc, href, badge }: {

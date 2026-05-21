@@ -1,8 +1,16 @@
-import { TrendingUp, Users, FileSignature, ShieldCheck, AlertTriangle, Clock, Star, ArrowUpRight, MapPin } from "lucide-react";
-import {
-  ADMIN_METRICS, ADMIN_ALERTS, ADMIN_TOP_CLIENTS, ADMIN_TECHNICIENS,
-} from "@/lib/demo-data";
-import RevenueChart from "./components/revenue-chart";
+import { createClient } from '@supabase/supabase-js'
+import Link from 'next/link'
+import { Users, SearchCheck, Target, ClipboardList } from 'lucide-react'
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `il y a ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `il y a ${hours}h`
+  const days = Math.floor(hours / 24)
+  return `il y a ${days}j`
+}
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -12,70 +20,109 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
     >
       {children}
     </div>
-  );
+  )
 }
 
-function CardHeader({ title, right }: { title: string; right?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between px-5 py-4"
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-      <h3 className="font-semibold text-sm text-white">{title}</h3>
-      {right}
-    </div>
-  );
-}
+export default async function AdminPage() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-const RECENT_RATINGS = [
-  { tech: "Thomas Lebrun", client: "Hilton Paris Opéra", rating: 5, comment: "Ponctuel, rapport très détaillé." },
-  { tech: "Sophie Martin", client: "Amazon Logistics", rating: 4, comment: "Bon travail, quelques écarts documentation." },
-  { tech: "Marc Durand", client: "Groupe Bonduelle", rating: 5, comment: "Excellence technique, recommandé." },
-];
+  const [
+    { data: leadsData },
+    { data: auditsData },
+    { data: candidaturesData },
+    { data: clientsData },
+  ] = await Promise.all([
+    supabase.from('leads').select('id, secteur, superficie, created_at, statut').order('created_at', { ascending: false }),
+    supabase.from('audits').select('id, nom_etablissement, email, statut, created_at, adresse').order('created_at', { ascending: false }),
+    supabase.from('candidatures_techniciens').select('id, prenom, nom, email, ville, experience, statut, created_at').order('created_at', { ascending: false }),
+    supabase.from('profiles').select('id, full_name, email').eq('role', 'client'),
+  ])
 
-export default function AdminPage() {
-  const churnColor = (level: "low" | "medium" | "high") =>
-    level === "high" ? "#DC2626" : level === "medium" ? "#F59E0B" : "#10B981";
+  const leads = leadsData ?? []
+  const audits = auditsData ?? []
+  const candidatures = candidaturesData ?? []
+  const clients = clientsData ?? []
+
+  // KPIs
+  const auditsEnAttente = audits.filter(a => a.statut === 'nouveau' || a.statut === 'en_attente').length
+  const leadsNouveaux = leads.filter(l => !l.statut || l.statut === 'nouveau').length
+  const candidaturesNouvelles = candidatures.filter(c => !c.statut || c.statut === 'nouveau').length
+  const clientsActifs = clients.length
+
+  // File d'attente unifiée
+  type QueueItem = { type: string; label: string; detail: string; depuis: string; href: string; urgence: number }
+  const queue: QueueItem[] = [
+    ...audits.filter(a => a.statut === 'nouveau' || a.statut === 'en_attente').map(a => ({
+      type: 'Audit',
+      label: a.nom_etablissement,
+      detail: a.adresse ?? a.email,
+      depuis: a.created_at,
+      href: '/admin/audits',
+      urgence: 1,
+    })),
+    ...leads.filter(l => !l.statut || l.statut === 'nouveau').slice(0, 5).map(l => ({
+      type: 'Lead',
+      label: l.secteur ?? 'Estimateur',
+      detail: `${l.superficie ?? '?'} m²`,
+      depuis: l.created_at,
+      href: '/admin/leads',
+      urgence: 2,
+    })),
+    ...candidatures.filter(c => !c.statut || c.statut === 'nouveau').map(c => ({
+      type: 'Candidature',
+      label: `${c.prenom} ${c.nom}`,
+      detail: c.ville,
+      depuis: c.created_at,
+      href: '/admin/candidatures',
+      urgence: 3,
+    })),
+  ].sort((a, b) => a.urgence - b.urgence || new Date(b.depuis).getTime() - new Date(a.depuis).getTime())
+
+  // Activité récente
+  type ActivityItem = { type: string; label: string; date: string; statut?: string }
+  const recent: ActivityItem[] = [
+    ...leads.slice(0, 3).map(l => ({ type: 'Lead', label: l.secteur ?? 'Estimateur', date: l.created_at, statut: l.statut })),
+    ...audits.slice(0, 3).map(a => ({ type: 'Audit', label: a.nom_etablissement, date: a.created_at, statut: a.statut })),
+    ...candidatures.slice(0, 3).map(c => ({ type: 'Candidature', label: `${c.prenom} ${c.nom}`, date: c.created_at, statut: c.statut })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
+
+  const kpis = [
+    { label: "Clients actifs", value: clientsActifs, icon: Users, color: "#60A5FA" },
+    { label: "Audits en attente", value: auditsEnAttente, icon: SearchCheck, color: "#F59E0B" },
+    { label: "Leads nouveaux", value: leadsNouveaux, icon: Target, color: "#10B981" },
+    { label: "Candidatures", value: candidaturesNouvelles, icon: ClipboardList, color: "#A78BFA" },
+  ]
+
+  function typeBadgeStyle(type: string) {
+    if (type === 'Lead') return { background: 'rgba(16,185,129,0.15)', color: '#10B981' }
+    if (type === 'Audit') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
+    return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
+  }
+
+  function queueTypeBadgeStyle(type: string) {
+    if (type === 'Audit') return { background: 'rgba(220,38,38,0.15)', color: '#DC2626' }
+    if (type === 'Lead') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
+    return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
+  }
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Vue Administrateur</h1>
+          <h1 className="text-2xl font-bold text-white">Tableau de bord</h1>
           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
             Plateforme NOXYERA — Back-office opérationnel
           </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium"
-          style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#10B981", fontFamily: "monospace" }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#10B981" }} />
-          En direct · {ADMIN_METRICS.techniciansToday} techniciens actifs
         </div>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: "GMV ce mois",
-            value: `${ADMIN_METRICS.gmv.toLocaleString("fr-FR")} €`,
-            icon: TrendingUp, color: "#10B981", change: "+18%",
-          },
-          {
-            label: "Contrats actifs",
-            value: ADMIN_METRICS.activeContracts,
-            icon: FileSignature, color: "#60A5FA", change: "+5 ce mois",
-          },
-          {
-            label: "Techniciens actifs",
-            value: ADMIN_METRICS.techniciansToday,
-            icon: Users, color: "#A78BFA", change: "sur 31 total",
-          },
-          {
-            label: "Conformité SLA",
-            value: `${ADMIN_METRICS.slaCompliance}%`,
-            icon: ShieldCheck, color: "#F59E0B", change: "cible >98%",
-          },
-        ].map(({ label, value, icon: Icon, color, change }) => (
+        {kpis.map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="p-5">
             <div className="flex items-start justify-between mb-3">
               <p className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
@@ -87,171 +134,93 @@ export default function AdminPage() {
               </div>
             </div>
             <p className="text-3xl font-bold text-white leading-none">{value}</p>
-            <p className="mt-2 text-xs flex items-center gap-1" style={{ color }}>
-              <ArrowUpRight size={11} /> {change}
-            </p>
           </Card>
         ))}
       </div>
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* LEFT */}
-        <div className="space-y-4">
-          {/* Techniciens actifs */}
-          <Card>
-            <CardHeader
-              title="Techniciens actifs aujourd'hui"
-              right={
-                <div className="flex items-center gap-3 text-xs" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#10B981" }} />
-                    En intervention
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#6B7280" }} />
-                    En transit
-                  </span>
-                </div>
-              }
-            />
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-              {ADMIN_TECHNICIENS.filter(t => t.statut === "actif").map((tech) => (
-                <div key={tech.id} className="flex items-center gap-3 px-5 py-3">
-                  <div
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: tech.missionsAujourdhui > 0 ? "#10B981" : "#6B7280" }}
-                  />
-                  <p className="flex-1 text-xs font-medium text-white">{tech.nom}</p>
-                  <span className="flex items-center gap-1 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    <MapPin size={10} />
-                    {tech.region}
-                  </span>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{
-                      background: tech.missionsAujourdhui > 0 ? "rgba(16,185,129,0.12)" : "rgba(107,114,128,0.12)",
-                      color: tech.missionsAujourdhui > 0 ? "#10B981" : "#9CA3AF",
-                    }}
-                  >
-                    {tech.missionsAujourdhui} mission{tech.missionsAujourdhui > 1 ? "s" : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Alertes */}
-          <Card>
-            <CardHeader title="Alertes en attente" />
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-              {ADMIN_ALERTS.map((alert) => (
-                <div key={alert.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/3 transition-colors cursor-pointer">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{
-                      background: alert.level === "danger" ? "#7F1D1D"
-                        : alert.level === "warning" ? "#78350F"
-                        : "#1E3A5F",
-                    }}
-                  >
-                    <AlertTriangle size={12} style={{
-                      color: alert.level === "danger" ? "#FCA5A5"
-                        : alert.level === "warning" ? "#FCD34D"
-                        : "#93C5FD",
-                    }} />
-                  </div>
-                  <p className="flex-1 text-xs" style={{ color: "rgba(255,255,255,0.75)" }}>{alert.text}</p>
-                  <Clock size={11} style={{ color: "rgba(255,255,255,0.25)" }} />
-                </div>
-              ))}
-            </div>
-          </Card>
+      {/* File d'attente */}
+      <Card>
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <h2 className="font-semibold text-sm text-white">File d&apos;attente</h2>
         </div>
+        {queue.length === 0 ? (
+          <div className="px-5 py-8 text-center" style={{ color: "#10B981", fontSize: "14px" }}>
+            Aucune action en attente ✓
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  {["Type", "Qui", "Détail", "Depuis", "Action"].map(col => (
+                    <th key={col} className="px-5 py-3 text-left text-xs uppercase tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {queue.map((item, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <td className="px-5 py-3">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium"
+                        style={queueTypeBadgeStyle(item.type)}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-white">{item.label}</td>
+                    <td className="px-5 py-3 text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{item.detail}</td>
+                    <td className="px-5 py-3 text-xs" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
+                      {timeAgo(item.depuis)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Link href={item.href}
+                        className="text-xs font-semibold"
+                        style={{ color: "#F26522", textDecoration: "none" }}>
+                        Voir →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
-        {/* RIGHT */}
-        <div className="space-y-4">
-          {/* Graphe ARR */}
-          <Card>
-            <CardHeader
-              title="Croissance ARR"
-              right={
-                <span className="text-xs font-semibold" style={{ color: "#10B981", fontFamily: "monospace" }}>+23% vs N-1</span>
-              }
-            />
-            <div className="px-4 py-4">
-              <RevenueChart />
-              <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "#1B4332" }} /> CA mensuel
+      {/* Activité récente */}
+      <Card>
+        <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <h2 className="font-semibold text-sm text-white">Activité récente</h2>
+        </div>
+        {recent.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+            Aucune activité récente
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+            {recent.map((item, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3">
+                <span className="px-2 py-1 rounded-full text-xs font-medium shrink-0"
+                  style={typeBadgeStyle(item.type)}>
+                  {item.type}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "#F26522" }} /> Marge nette
+                <p className="flex-1 text-sm text-white truncate">{item.label}</p>
+                {item.statut && (
+                  <span className="text-xs px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}>
+                    {item.statut}
+                  </span>
+                )}
+                <span className="text-xs shrink-0" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
+                  {timeAgo(item.date)}
                 </span>
               </div>
-            </div>
-          </Card>
-
-          {/* Top clients */}
-          <Card>
-            <CardHeader title="Clients par ARR" />
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-              {ADMIN_TOP_CLIENTS.map((client, i) => (
-                <div key={client.name} className="flex items-center gap-3 px-5 py-3">
-                  <span className="text-xs w-4 shrink-0" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>
-                    {i + 1}
-                  </span>
-                  <p className="flex-1 text-xs truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
-                    {client.name}
-                  </p>
-                  <span className="text-xs font-bold text-white" style={{ fontFamily: "monospace" }}>
-                    {client.arr.toLocaleString("fr-FR")} €
-                  </span>
-                  <span className="text-xs font-medium" style={{
-                    color: client.trend.startsWith("+") ? "#10B981" : "#DC2626",
-                    fontFamily: "monospace",
-                  }}>
-                    {client.trend}
-                  </span>
-                  <div
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: churnColor(client.churn) }}
-                    title={`Risque churn : ${client.churn}`}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="px-5 py-2 text-xs" style={{ color: "rgba(255,255,255,0.3)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              ● Rouge = risque churn élevé · ● Orange = moyen · ● Vert = faible
-            </div>
-          </Card>
-
-          {/* Dernières évaluations */}
-          <Card>
-            <CardHeader title="Dernières évaluations techniciens" />
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-              {RECENT_RATINGS.map((r, i) => (
-                <div key={i} className="px-5 py-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-semibold text-white">{r.tech}</p>
-                    <div className="flex items-center gap-0.5">
-                      {Array.from({ length: 5 }).map((_, s) => (
-                        <Star key={s} size={10} style={{ color: s < r.rating ? "#F59E0B" : "rgba(255,255,255,0.15)", fill: s < r.rating ? "#F59E0B" : "transparent" }} />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    {r.client}
-                  </p>
-                  <p className="text-xs italic" style={{ color: "rgba(255,255,255,0.55)" }}>
-                    &ldquo;{r.comment}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
-  );
+  )
 }

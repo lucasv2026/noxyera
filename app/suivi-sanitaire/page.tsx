@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, ShieldCheck, Clock, Download, Users, Rat, Bug, ClipboardList, Zap, BedDouble, VolumeX, Camera, Trophy, Map, Package, BarChart2, RefreshCw, Factory, Pencil, FlaskConical, CheckSquare, type LucideIcon } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, ShieldCheck, Clock, Download, Rat, Bug, ClipboardList, Zap, BedDouble, VolumeX, Camera, Trophy, Map, Package, BarChart2, RefreshCw, Factory, Pencil, FlaskConical, CheckSquare, type LucideIcon } from "lucide-react";
 import { MegaMenu } from "@/components/MegaMenu";
 
 const sectionStyle = (bg: string) => ({
@@ -274,109 +274,29 @@ export default function SuiviSanitairePage() {
             Tous nos techniciens sont certifiés Certibiocide par l&apos;ANSES et formés aux exigences HACCP.
             Chaque certification est vérifiable et incluse dans vos rapports.
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: "20px",
-              marginBottom: "32px",
-            }}
-          >
-            {[
-              {
-                initials: "TL",
-                nom: "Thomas Lebrun",
-                cert: "NX-2024-0847",
-                spec: "Restauration & Hôtellerie",
-                interventions: 148,
-                note: 4.9,
-              },
-              {
-                initials: "JD",
-                nom: "Jean-Marc Deschamps",
-                cert: "NX-2024-0412",
-                spec: "Industrie agroalimentaire",
-                interventions: 203,
-                note: 4.8,
-              },
-              {
-                initials: "SM",
-                nom: "Sophie Martin",
-                cert: "NX-2024-1023",
-                spec: "Logistique & Entrepôts",
-                interventions: 97,
-                note: 5.0,
-              },
-            ].map((tech) => (
-              <div
-                key={tech.nom}
-                style={{
-                  background: "white",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "16px" }}>
-                  <div
-                    style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "50%",
-                      background: "#1B3A2D",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontWeight: 700,
-                      fontSize: "16px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {tech.initials}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "15px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>{tech.nom}</p>
-                    <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0" }}>{tech.spec}</p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", color: "#6B7280" }}>Certification</span>
-                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#1B3A2D" }}>{tech.cert}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", color: "#6B7280" }}>Interventions</span>
-                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#1A1A1A" }}>{tech.interventions}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", color: "#6B7280" }}>Note client</span>
-                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#F26522" }}>⭐ {tech.note}/5</span>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    marginTop: "14px",
-                    padding: "6px 10px",
-                    borderRadius: "8px",
-                    background: "#D1FAE5",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <ShieldCheck size={12} style={{ color: "#059669" }} />
-                  <span style={{ fontSize: "11px", fontWeight: 600, color: "#065F46" }}>Certibiocide ANSES</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <Users size={16} style={{ color: "#6B7280" }} />
-            <span style={{ fontSize: "14px", color: "#6B7280" }}>
-              Réseau de 31 techniciens certifiés répartis dans toute la France
-            </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px", alignItems: "center", textAlign: "center", padding: "40px 0" }}>
+            <div style={{
+              width: "64px", height: "64px", borderRadius: "50%",
+              background: "#D1FAE5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto"
+            }}>
+              <ShieldCheck size={28} style={{ color: "#059669" }} />
+            </div>
+            <div style={{ maxWidth: "560px" }}>
+              <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#1A1A1A", margin: "0 0 12px" }}>
+                Des techniciens rigoureusement sélectionnés
+              </h3>
+              <p style={{ fontSize: "15px", color: "#6B7280", lineHeight: 1.7, margin: 0 }}>
+                Chaque technicien Noxyera est certifié Certibiocide par l&apos;ANSES avant toute intervention.
+                Cette certification est vérifiée, à jour, et apparaît dans chaque rapport remis à votre établissement.
+              </p>
+            </div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              background: "#D1FAE5", borderRadius: "999px", padding: "8px 18px"
+            }}>
+              <ShieldCheck size={14} style={{ color: "#059669" }} />
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "#065F46" }}>Certification Certibiocide ANSES vérifiée</span>
+            </div>
           </div>
         </div>
       </section>
