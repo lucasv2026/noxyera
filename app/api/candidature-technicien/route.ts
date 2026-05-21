@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { rateLimit } from '@/lib/rateLimit'
 import * as Sentry from '@sentry/nextjs'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const CandidatureSchema = z.object({
   prenom: z.string().min(2),
@@ -25,8 +28,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
+    console.log('CANDIDATURE RECEIVED:', JSON.stringify(body))
+
     const parsed = CandidatureSchema.safeParse(body)
     if (!parsed.success) {
+      console.error('CANDIDATURE VALIDATION ERROR:', JSON.stringify(parsed.error.flatten()))
       return Response.json({ error: 'Données invalides', details: parsed.error.flatten() }, { status: 400 })
     }
 
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
     try {
       const { createClient } = await import('@/lib/supabase/server')
       const supabase = createClient()
-      await supabase.from('candidatures_techniciens').insert({
+      const { error: dbError } = await supabase.from('candidatures_techniciens').insert({
         prenom: data.prenom,
         nom: data.nom,
         email: data.email,
@@ -56,11 +62,37 @@ export async function POST(request: Request) {
         motivation: data.motivation ?? null,
         statut: 'nouveau',
       })
+      if (dbError) console.error('CANDIDATURE DB ERROR:', JSON.stringify(dbError))
+      else console.log('CANDIDATURE SAVED OK')
     } catch (dbErr) {
+      console.error('CANDIDATURE DB EXCEPTION:', dbErr)
       Sentry.captureException(dbErr)
     }
 
-    // Email confirmation au candidat + notif admin
+    // Email notif admin — toujours envoyé même si Supabase échoue
+    try {
+      if (process.env.RESEND_API_KEY) {
+        await resend.emails.send({
+          from: 'Noxyera <onboarding@resend.dev>',
+          to: 'lucas@agencenikita.com',
+          subject: `🧑‍🔧 Nouveau technicien candidat — ${data.prenom} ${data.nom}`,
+          html: `<p><strong>Prénom :</strong> ${data.prenom} ${data.nom}</p>
+                 <p><strong>Email :</strong> ${data.email}</p>
+                 <p><strong>Téléphone :</strong> ${data.telephone}</p>
+                 <p><strong>Ville :</strong> ${data.ville} (${data.code_postal})</p>
+                 <p><strong>Expérience :</strong> ${data.experience}</p>
+                 <p><strong>Disponibilité :</strong> ${data.disponibilite}</p>
+                 <p><strong>Véhicule :</strong> ${data.vehicule ? 'Oui' : 'Non'}</p>
+                 ${data.certifications?.length ? `<p><strong>Certifications :</strong> ${data.certifications.join(', ')}</p>` : ''}
+                 ${data.motivation ? `<p><strong>Motivation :</strong> ${data.motivation}</p>` : ''}`,
+        })
+        console.log('EMAIL CANDIDATURE ADMIN SENT')
+      }
+    } catch (emailAdminErr) {
+      console.error('EMAIL CANDIDATURE ADMIN ERROR:', emailAdminErr)
+    }
+
+    // Email confirmation au candidat
     try {
       const { sendCandidatureConfirmEmail } = await import('@/lib/emails')
       await sendCandidatureConfirmEmail(data.email, {
@@ -71,6 +103,7 @@ export async function POST(request: Request) {
         disponibilite:  data.disponibilite,
       })
     } catch (emailErr) {
+      console.error('EMAIL CANDIDATURE CONFIRM ERROR:', emailErr)
       Sentry.captureException(emailErr)
     }
 

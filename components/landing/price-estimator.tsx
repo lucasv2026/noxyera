@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,16 +12,9 @@ import {
   Store,
   Truck,
   Warehouse,
-  TrendingDown,
-  TrendingUp,
-  Minus,
 } from "lucide-react";
 import {
-  calculerPrix,
-  calculerPrixSimple,
   formuleSuggeree,
-  positionVsMarche,
-  BENCHMARK_MARCHE,
   SUPERFICIE_CONFIG,
   frequences,
   secteurs,
@@ -93,15 +86,6 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
   const sliderPct = ((superficie - cfg.min) / (cfg.max - cfg.min)) * 100;
 
   const formule  = formuleSuggeree(curatives, frequence);
-  const nuisible = curatives ? "multi" : "insectes";
-
-  const result = useMemo(
-    () => calculerPrix({ secteur, superficie, frequence, nuisible, formule }),
-    [secteur, superficie, frequence, nuisible, formule]
-  );
-
-  const position = positionVsMarche(prixCalcule, secteur);
-  const bench    = BENCHMARK_MARCHE[secteur];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,7 +101,7 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
           superficie,
           frequence,
           curatives,
-          nuisible,
+          nuisible: curatives ? "multi" : "insectes",
           prix_estime:      prixCalcule,
           prix_bas:         prixBas,
           prix_haut:        prixHaut,
@@ -306,158 +290,73 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
         </div>
       </div>
 
-      {/* ── Panel résultat ─────────────────────────────────────────────── */}
+      {/* ── Panel CTA ──────────────────────────────────────────────────── */}
       <aside className="h-fit rounded-2xl text-white shadow-lg lg:sticky lg:top-6" style={{ background: "#1B3A2D" }}>
-        {/* Prix principal */}
-        <div className="px-6 pt-6 pb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
-            Tarif estimé
+        <div className="px-6 pt-6 pb-6">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "#F26522" }}>
+            Estimation gratuite
           </p>
-          <div className="mt-2">
-            <span className="text-3xl font-black" style={{ color: "#F26522" }}>
-              {euroFormatter.format(prixBas)}
-            </span>
-            <span className="text-xl font-black mx-2" style={{ color: "rgba(255,255,255,0.4)" }}>—</span>
-            <span className="text-3xl font-black" style={{ color: "#F26522" }}>
-              {euroFormatter.format(prixHaut)}
-            </span>
-            <span className="text-sm ml-2" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
-          </div>
-          <p className="mt-1 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Estimation indicative · Devis précis par email
+          <h3 className="text-xl font-bold text-white mb-3 leading-snug">
+            Recevez votre estimation personnalisée
+          </h3>
+          <p className="text-sm mb-6 leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+            Secteur, superficie, fréquence — nous calculons votre tarif exact et vous l&apos;envoyons par email avec une analyse de votre zone.
           </p>
-        </div>
 
-        {/* Badge position marché */}
-        <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          {position === "competitif" && (
-            <div className="flex items-center gap-2">
-              <TrendingDown size={14} style={{ color: "#4ADE80" }} />
-              <span className="text-xs font-semibold" style={{ color: "#4ADE80" }}>
-                Prix inférieur aux concurrents locaux
-              </span>
-            </div>
-          )}
-          {position === "dans_fourchette" && (
-            <div className="flex items-center gap-2">
-              <Minus size={14} style={{ color: "#FCD34D" }} />
-              <span className="text-xs font-semibold" style={{ color: "#FCD34D" }}>
-                Dans la fourchette du marché
-              </span>
-            </div>
-          )}
-          {position === "premium" && (
-            <div className="flex items-center gap-2">
-              <TrendingUp size={14} style={{ color: "#F97316" }} />
-              <span className="text-xs font-semibold" style={{ color: "#F97316" }}>
-                Positionnement premium service
-              </span>
-            </div>
-          )}
-
-          {/* Barre fourchette marché */}
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-              <span>Marché : {euroFormatter.format(bench.bas)}</span>
-              <span>{euroFormatter.format(bench.haut)}</span>
-            </div>
-            <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.12)" }}>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.min(100, Math.max(4, ((prixCalcule - bench.bas) / (bench.haut - bench.bas)) * 100))}%`,
-                  background: "#F26522",
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Détail calcul */}
-        <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-          <p className="text-xs font-semibold mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Ce que comprend votre contrat
-          </p>
-          <div className="space-y-2">
-            {[
-              `${frequence} passages préventifs / an`,
-              `Technicien certifié Certibiocide`,
-              `Rapport HACCP après chaque intervention`,
-              curatives ? "Curatives illimitées incluses" : "Interventions préventives uniquement",
-              `Tableau de bord client + export PDF`,
-              formule === "serenite" ? "Formule Sérénité · priorité 24h" : "Formule Essentiel · délai 72h",
-            ].map((line) => (
-              <div key={line} className="flex items-start gap-2">
-                <Check size={12} className="mt-0.5 shrink-0" style={{ color: "#4ADE80" }} />
-                <span className="text-xs leading-tight" style={{ color: "rgba(255,255,255,0.7)" }}>
-                  {line}
-                </span>
+          {submitState === "success" ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl p-4" style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}>
+                <Check size={16} className="shrink-0" style={{ color: "#10B981" }} />
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "#10B981" }}>Estimation envoyée !</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>{email}</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Formulaire capture / résultat */}
-        {submitState === "success" ? (
-          <div className="px-6 py-5 space-y-4">
-            {/* Résultat prix */}
-            <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-                Votre estimation personnalisée
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Votre devis précis vous sera envoyé sous 24h par notre équipe.
               </p>
-              <p className="text-2xl font-black" style={{ color: "#F26522" }}>
-                Entre {euroFormatter.format(prixBas)} et {euroFormatter.format(prixHaut)}
-                <span className="text-sm font-medium ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
-              </p>
-              <p className="text-sm mt-1 font-semibold text-white">
-                Formule {formule === "serenite" ? "Sérénité" : "Essentiel"} recommandée
-              </p>
-              <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-                Votre devis précis vous sera envoyé sous 24h
-              </p>
+              <Link
+                href={`/audit?secteur=${secteur}&superficie=${superficie}&frequence=${frequence}`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90"
+                style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
+              >
+                Demander mon audit gratuit
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Check size={12} /> Estimation envoyée à {email}</span>
-            </p>
-            <Link
-              href={`/audit?secteur=${secteur}&superficie=${superficie}&frequence=${frequence}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90"
-              style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
-            >
-              Demander mon audit gratuit →
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={onSubmit} className="px-6 py-5 space-y-3">
-            <p className="text-sm font-semibold text-white">
-              Recevoir cette estimation par email
-            </p>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@entreprise.fr"
-              className="h-11 w-full rounded-xl border-0 bg-white/10 px-4 text-sm text-white outline-none ring-2 ring-transparent transition placeholder:text-white/40 focus:ring-orange-400"
-            />
-            <button
-              type="submit"
-              disabled={submitState === "loading"}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
-            >
-              {submitState === "loading" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              Voir mon estimation →
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            {submitState === "error" && message && (
-              <p className="text-xs text-orange-300">{message}</p>
-            )}
-          </form>
-        )}
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-3">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@entreprise.fr"
+                className="h-11 w-full rounded-xl border-0 bg-white/10 px-4 text-sm text-white outline-none ring-2 ring-transparent transition placeholder:text-white/40 focus:ring-orange-400"
+              />
+              <button
+                type="submit"
+                disabled={submitState === "loading"}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
+              >
+                {submitState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Recevoir mon estimation →
+              </button>
+              {submitState === "error" && message && (
+                <p className="text-xs text-orange-300">{message}</p>
+              )}
+              <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <Link
+                  href={`/audit?secteur=${secteur}&superficie=${superficie}&frequence=${frequence}`}
+                  style={{ color: "rgba(255,255,255,0.55)", textDecoration: "underline" }}
+                >
+                  Puis demandez votre audit gratuit
+                </Link>{" "}· Réponse sous 24h
+              </p>
+            </form>
+          )}
+        </div>
       </aside>
     </section>
   );

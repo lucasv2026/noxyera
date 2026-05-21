@@ -44,16 +44,22 @@ export async function PATCH(request: Request) {
   const { error } = await supabase.from("audits").update(updates).eq("id", id);
   if (error) console.error("AUDIT UPDATE ERROR:", JSON.stringify(error));
 
-  // Si statut → 'audit planifié' et technicien_id fourni → envoyer emails
+  // Si statut → 'audit planifié' et technicien_id fourni → envoyer emails tech + client
   if (statut === "audit planifié" && technicien_id && date_audit_prevue) {
     try {
       const { data: auditData } = await supabase.from("audits").select("*").eq("id", id).single();
-      const { data: techData }  = await supabase.from("profiles").select("email, prenom, nom").eq("id", technicien_id).single();
+      const { data: techData }  = await supabase.from("profiles").select("email, prenom, nom, telephone").eq("id", technicien_id).single();
+
+      const dateFormatted = new Date(date_audit_prevue).toLocaleDateString("fr-FR", {
+        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+      });
 
       if (auditData && techData) {
-        const { sendAuditAssignEmail } = await import("@/lib/emails");
+        const { sendAuditAssignEmail, sendAuditPlanifieClientEmail } = await import("@/lib/emails");
+
+        // Email au technicien
         await sendAuditAssignEmail(techData.email, {
-          nomTechnicien:   `${techData.prenom} ${techData.nom}`,
+          nomTechnicien:    `${techData.prenom} ${techData.nom}`,
           nomEtablissement: auditData.nom_etablissement,
           adresse:          auditData.adresse,
           secteur:          auditData.secteur,
@@ -61,7 +67,18 @@ export async function PATCH(request: Request) {
           zonesSensibles:   auditData.zones_sensibles ?? [],
           creneaux:         auditData.creneaux ?? [],
           jours:            auditData.jours ?? [],
-          dateAuditPrevue:  new Date(date_audit_prevue).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }),
+          dateAuditPrevue:  dateFormatted,
+        });
+
+        // Email au client
+        await sendAuditPlanifieClientEmail(auditData.email, {
+          prenomClient:     auditData.prenom,
+          nomEtablissement: auditData.nom_etablissement,
+          adresse:          auditData.adresse,
+          prenomTech:       techData.prenom,
+          nomTech:          techData.nom,
+          telephoneTech:    techData.telephone ?? "",
+          dateFormatted,
         });
       }
     } catch (emailErr) {

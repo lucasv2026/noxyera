@@ -25,10 +25,15 @@ export function AuditClientEmail({ prenom, nomEtablissement, adresse, secteur, c
       <Heading style={{ color: '#1B3A2D', fontSize: '22px', margin: '0 0 8px' }}>
         Bonjour {prenom}, votre demande est confirmée !
       </Heading>
-      <Text style={{ color: '#6B7280', margin: '0 0 24px', fontSize: '15px' }}>
-        Nous avons bien reçu votre demande d&apos;audit pour{' '}
+      <Text style={{ color: '#6B7280', margin: '0 0 8px', fontSize: '15px' }}>
+        Votre demande est bien enregistrée pour{' '}
         <strong style={{ color: '#1B3A2D' }}>{nomEtablissement}</strong>.
-        Un technicien certifié Noxyera vous contactera sous <strong>48h</strong> pour confirmer un créneau.
+      </Text>
+      <Text style={{ color: '#6B7280', margin: '0 0 24px', fontSize: '15px' }}>
+        {jours.length > 0 && creneaux.length > 0 ? (
+          <>Vous avez indiqué être disponible <strong style={{ color: '#1B3A2D' }}>{jours.join(', ')}</strong> en <strong style={{ color: '#1B3A2D' }}>{creneaux.join(' / ')}</strong>. </>
+        ) : null}
+        Un technicien Noxyera confirmera le rendez-vous exact sous <strong>24h</strong> par email et téléphone.
       </Text>
 
       <table width="100%" style={{ backgroundColor: '#F5F0E8', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
@@ -69,7 +74,8 @@ export function AuditClientEmail({ prenom, nomEtablissement, adresse, secteur, c
       </table>
 
       <Text style={{ color: '#1A1A1A', fontSize: '14px', margin: '0 0 20px' }}>
-        En attendant notre appel, vous pouvez découvrir comment fonctionne notre plateforme de suivi sanitaire :
+        En attendant, vous pouvez nous joindre directement :{' '}
+        <a href="mailto:lucas@agencenikita.com" style={{ color: '#F26522' }}>lucas@agencenikita.com</a>
       </Text>
 
       <Button
@@ -82,7 +88,7 @@ export function AuditClientEmail({ prenom, nomEtablissement, adresse, secteur, c
       <Hr style={{ borderColor: '#F0F0F0', margin: '32px 0' }} />
       <Text style={{ color: '#9CA3AF', fontSize: '13px', margin: 0 }}>
         L&apos;équipe Noxyera<br />
-        <span style={{ color: '#6B7280' }}>contact@noxyera.com · noxyera.com</span>
+        <span style={{ color: '#6B7280' }}>lucas@agencenikita.com · noxyera.com</span>
       </Text>
     </EmailLayout>
   )

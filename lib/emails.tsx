@@ -9,6 +9,7 @@ import { LeadEmail, LeadNotifAdmin } from '../emails/LeadEmail'
 import { CandidatureConfirmEmail } from '../emails/CandidatureConfirmEmail'
 import { AuditClientEmail } from '../emails/AuditClientEmail'
 import { AuditAssignEmail, AuditAdminNotifEmail } from '../emails/AuditAssignEmail'
+import { AuditPlanifieClientEmail } from '../emails/AuditPlanifieClientEmail'
 
 console.log('RESEND KEY:', process.env.RESEND_API_KEY ? 'présente' : 'MANQUANTE')
 
@@ -170,6 +171,27 @@ export async function sendAuditAssignEmail(
     console.log('EMAIL SENT audit assign:', JSON.stringify(result))
     return result
   } catch (err) { console.error('EMAIL ERROR audit assign:', err) }
+}
+
+// ── Audit : confirmation client quand date planifiée ─────────────────────────
+export async function sendAuditPlanifieClientEmail(
+  to: string,
+  props: {
+    prenomClient: string; nomEtablissement: string; adresse: string;
+    prenomTech: string; nomTech: string; telephoneTech: string; dateFormatted: string
+  }
+) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] audit planifie client to', to); return }
+  try {
+    const html = await render(React.createElement(AuditPlanifieClientEmail, props))
+    const result = await resend.emails.send({
+      from: FROM, to,
+      subject: `Votre audit Noxyera est planifié — ${props.dateFormatted}`,
+      html,
+    })
+    console.log('EMAIL SENT audit planifie client:', JSON.stringify(result))
+    return result
+  } catch (err) { console.error('EMAIL ERROR audit planifie client:', err) }
 }
 
 // ── Confirmation candidature technicien ───────────────────────────────────────

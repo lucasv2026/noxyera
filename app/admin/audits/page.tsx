@@ -84,6 +84,7 @@ export default function AdminAuditsPage() {
   const [filter, setFilter]           = useState<string>("tous");
   const [search, setSearch]           = useState("");
   const [saving, setSaving]           = useState<string | null>(null);
+  const [toast, setToast]             = useState<string | null>(null);
 
   // Inline edit state per audit
   const [edits, setEdits] = useState<Record<string, { technicien_id?: string; date?: string; notes?: string }>>({});
@@ -137,6 +138,9 @@ export default function AdminAuditsPage() {
         date_audit_prevue: date ?? a.date_audit_prevue,
         notes_internes:    edit.notes ?? a.notes_internes,
       } : a));
+      const msg = date ? "Audit planifié · Emails envoyés au client et au technicien ✓" : "Technicien assigné ✓";
+      setToast(msg);
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setSaving(null);
     }
@@ -159,6 +163,18 @@ export default function AdminAuditsPage() {
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 9999,
+          background: "#10B981", color: "white", padding: "12px 20px", borderRadius: 12,
+          fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <Check size={15} /> {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "white", margin: "0 0 4px" }}>Demandes d&apos;audit</h1>
@@ -298,7 +314,7 @@ export default function AdminAuditsPage() {
                       style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "#F26522", color: "white", border: "none", cursor: saving === audit.id ? "default" : "pointer", fontWeight: 600, fontSize: 12, opacity: saving === audit.id ? 0.7 : 1 }}
                     >
                       {saving === audit.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                      Confirmer
+                      Confirmer et notifier
                     </button>
 
                     {/* Dropdown statut */}
