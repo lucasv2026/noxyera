@@ -60,10 +60,9 @@ export async function POST(request: Request) {
   const { error } = await supabase.from("leads").insert(validation.data);
 
   if (error) {
-    return NextResponse.json(
-      { message: "Impossible d'enregistrer le lead pour le moment." },
-      { status: 500 }
-    );
+    console.error('LEAD INSERT ERROR:', JSON.stringify(error))
+    // Ne pas bloquer l'UX — l'estimation a déjà été calculée
+    return NextResponse.json({ success: true, saved: false, message: "Estimation calculée." })
   }
 
   // Fire email notification to Lucas — non-blocking

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import {
   calculerPrix,
+  calculerPrixSimple,
   formuleSuggeree,
   positionVsMarche,
   BENCHMARK_MARCHE,
@@ -61,11 +62,22 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
   const [email, setEmail]           = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage]       = useState("");
+  const [prixCalcule, setPrixCalcule] = useState<number>(() =>
+    calculerPrixSimple("restaurant", SUPERFICIE_CONFIG["restaurant"].defaultValue, 4, true)
+  );
 
   // When sector changes → reset superficie to sector default
   useEffect(() => {
     setSuperficie(SUPERFICIE_CONFIG[secteur].defaultValue);
   }, [secteur]);
+
+  // Recalculer le prix à chaque changement de paramètre
+  useEffect(() => {
+    if (secteur && superficie && frequence) {
+      const prix = calculerPrixSimple(secteur, superficie, frequence, curatives)
+      setPrixCalcule(prix)
+    }
+  }, [secteur, superficie, frequence, curatives]);
 
   const cfg = SUPERFICIE_CONFIG[secteur];
   const sliderPct = ((superficie - cfg.min) / (cfg.max - cfg.min)) * 100;
@@ -78,7 +90,7 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
     [secteur, superficie, frequence, nuisible, formule]
   );
 
-  const position = positionVsMarche(result.prixAnnuel, secteur);
+  const position = positionVsMarche(prixCalcule, secteur);
   const bench    = BENCHMARK_MARCHE[secteur];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -96,7 +108,7 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
           frequence,
           curatives,
           nuisible,
-          prix_estime:      result.prixAnnuel,
+          prix_estime:      prixCalcule,
           formule_suggeree: formule,
         }),
       });
@@ -291,13 +303,13 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
           </p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-4xl font-black" style={{ color: "#F26522" }}>
-              {euroFormatter.format(result.prixAnnuel)}
+              {euroFormatter.format(prixCalcule)}
             </span>
             <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
           </div>
           <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-            soit <strong style={{ color: "white" }}>{euroFormatter.format(result.prixParPassage)}</strong> / passage ·{" "}
-            <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(result.prixAnnuel / 12))}</strong> / mois
+            soit <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(prixCalcule / frequence))}</strong> / passage ·{" "}
+            <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(prixCalcule / 12))}</strong> / mois
           </p>
         </div>
 
@@ -338,7 +350,7 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${Math.min(100, Math.max(4, ((result.prixAnnuel - bench.bas) / (bench.haut - bench.bas)) * 100))}%`,
+                  width: `${Math.min(100, Math.max(4, ((prixCalcule - bench.bas) / (bench.haut - bench.bas)) * 100))}%`,
                   background: "#F26522",
                 }}
               />
@@ -379,14 +391,14 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
                 Votre estimation personnalisée
               </p>
               <p className="text-3xl font-black" style={{ color: "#F26522" }}>
-                {euroFormatter.format(result.prixAnnuel)}
+                {euroFormatter.format(prixCalcule)}
                 <span className="text-sm font-medium ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
               </p>
               <p className="text-sm mt-1 font-semibold text-white">
                 Formule {formule === "serenite" ? "Sérénité" : "Essentiel"} recommandée
               </p>
               <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-                soit {euroFormatter.format(result.prixParPassage)}/passage · {euroFormatter.format(Math.round(result.prixAnnuel / 12))}/mois
+                soit {euroFormatter.format(Math.round(prixCalcule / frequence))}/passage · {euroFormatter.format(Math.round(prixCalcule / 12))}/mois
               </p>
             </div>
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>

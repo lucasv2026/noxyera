@@ -60,8 +60,9 @@ export async function POST(request: Request) {
         prestataire_actuel: prestataire_actuel ?? null,
         score_risque: null,
       });
-    } catch {
-      // Demo mode — silently ignore DB errors
+    } catch (dbErr) {
+      console.error('AUDIT DB ERROR:', JSON.stringify(dbErr))
+      // Ne pas bloquer — retourner success quand même
     }
 
     // 2. Envoie la notification interne via lib/emails.tsx

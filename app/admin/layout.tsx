@@ -1,13 +1,14 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp } from "lucide-react";
+import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList } from "lucide-react";
 
 const NAV = [
   { label: "Vue d'ensemble", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin/clients", icon: Users },
   { label: "Techniciens", href: "/admin/techniciens", icon: Wrench },
-  { label: "Leads", href: "/admin/leads", icon: Target },
+  { label: "Candidatures", href: "/admin/candidatures", icon: ClipboardList },
+  { label: "Leads & clients", href: "/admin/leads", icon: Target },
   { label: "Planning", href: "/admin/planning", icon: Calendar },
   { label: "Revenus", href: "/admin/revenus", icon: TrendingUp },
 ];

@@ -50,7 +50,34 @@ const COUT_MATERIEL: Record<Nuisible, number> = {
 
 const MULTIPLICATEUR_SERENITE = 1.35
 
-// ── Calcul du prix ───────────────────────────────────────────────────────────
+// ── Calcul simplifié (€/m²/an × coeff fréquence) ────────────────────────────
+const BASE_PAR_M2: Record<string, number> = {
+  restaurant:      8,
+  hotel:           10,
+  entrepot:        1.5,
+  agroalimentaire: 2,
+  immeuble:        1,
+  bureau:          0.8,
+}
+
+const COEFF_FREQUENCE: Record<number, number> = {
+  4:  1.0,
+  6:  1.3,
+  12: 1.8,
+}
+
+export function calculerPrixSimple(
+  secteur: string,
+  superficie: number,
+  frequence: number,
+  curatives: boolean,
+): number {
+  const base = BASE_PAR_M2[secteur] ?? 5
+  const prix = base * superficie * (COEFF_FREQUENCE[frequence] ?? 1) * (curatives ? 1.25 : 1)
+  return Math.max(600, Math.ceil(prix / 50) * 50)
+}
+
+// ── Calcul du prix (modèle coût complet) ─────────────────────────────────────
 export function calculerPrix(params: PricingParams): {
   prixAnnuel: number
   prixParPassage: number

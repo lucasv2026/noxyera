@@ -105,38 +105,37 @@ export default function TechniciensPage() {
       <MegaMenu />
 
       {/* ── Hero ── */}
-      <div style={{ width: '100%', height: '90vh', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '55vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200"
           alt="Technicien au travail"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(100%)' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(100%)' }}
         />
         {/* Overlay */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 100%)',
+          background: 'linear-gradient(135deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 100%)',
         }} />
-        {/* Contenu */}
-        <div style={{ position: 'relative', zIndex: 1, padding: '80px 60px', maxWidth: 700 }}>
+        {/* Contenu centré */}
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 24px', maxWidth: 700 }}>
           <h1 style={{
-            fontSize: 52,
+            fontSize: 'clamp(32px, 5vw, 48px)',
             fontWeight: 800,
             color: 'white',
             lineHeight: 1.15,
             margin: 0,
-            whiteSpace: 'pre-line',
           }}>
-            {`Libérez-vous des contraintes.\nNous gérons tout le reste.`}
+            Rejoignez le réseau Noxyera
           </h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', marginTop: 20 }}>
-            Missions garanties · Rapports automatiques · Paiement sous 48h
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', marginTop: 16 }}>
+            Des missions régulières, un outil simple, des clients sérieux.
           </p>
           <button
             onClick={() => scrollTo('candidature-form')}
             style={{
-              marginTop: 40,
+              marginTop: 32,
               background: '#F26522',
               color: 'white',
               padding: '16px 32px',
