@@ -28,28 +28,37 @@ export default function LoginPage() {
     setLoading(true);
 
     if (isDemoMode) {
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
       return;
     }
 
-    const supabase = createClient();
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError("Email ou mot de passe incorrect. Vérifiez vos identifiants.");
+      if (authError) {
+        if (authError.message.includes("Invalid login credentials") || authError.message.includes("invalid")) {
+          setError("Email ou mot de passe incorrect.");
+        } else if (authError.message.includes("Email not confirmed")) {
+          setError("Vérifiez votre boîte mail — vous devez confirmer votre email.");
+        } else {
+          setError(`Erreur : ${authError.message}`);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Rechargement complet — nécessaire pour que les cookies Supabase
+      // soient propagés au middleware avant la navigation
+      window.location.href = "/dashboard";
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Erreur de connexion. Vérifiez votre connexion internet.");
       setLoading(false);
-      return;
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", data.user?.id)
-      .maybeSingle();
-
-    // Full reload nécessaire pour que les cookies Supabase SSR
-    // soient propagés au middleware avant la navigation
-    window.location.href = "/dashboard";
   }
 
   return (
