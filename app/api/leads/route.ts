@@ -15,7 +15,8 @@ type LeadPayload = {
   curatives?: unknown;
   prix_estime?: unknown;
   formule_suggeree?: unknown;
-  score_risque?: unknown;
+  prix_bas?: unknown;
+  prix_haut?: unknown;
 };
 
 const frequenceValues = [4, 6, 12] as const;
@@ -45,10 +46,7 @@ export async function POST(request: Request) {
 
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json(
-      {
-        saved: false,
-        message: "Estimation calculée. Configure Supabase pour l'enregistrer en base."
-      },
+      { saved: false, message: "Estimation calculée. Configure Supabase pour l'enregistrer en base." },
       { status: 202 }
     );
   }
@@ -57,32 +55,42 @@ export async function POST(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 
-  console.log('INSERTING LEAD:', JSON.stringify(validation.data))
-  const { error } = await supabase.from("leads").insert(validation.data);
+  // Insert uniquement les colonnes existantes en base
+  const insertData = {
+    email:            validation.data.email,
+    secteur:          validation.data.secteur,
+    superficie:       validation.data.superficie,
+    frequence:        validation.data.frequence,
+    curatives:        validation.data.curatives,
+    prix_estime:      validation.data.prix_estime,
+    formule_suggeree: validation.data.formule_suggeree,
+    type:             'estimateur',
+  };
+
+  console.log('INSERTING LEAD:', JSON.stringify(insertData))
+  const { error } = await supabase.from("leads").insert(insertData);
 
   if (error) {
     console.error('SUPABASE ERROR:', JSON.stringify(error))
-    // Ne pas bloquer l'UX — l'estimation a déjà été calculée
     return NextResponse.json({ success: true, saved: false, message: "Estimation calculée." })
   }
 
-  // Fire email notification to Lucas — non-blocking
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001'
-  fetch(`${siteUrl}/api/email/send`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'nouveau_lead',
-      data: {
-        email: validation.data.email,
-        secteur: validation.data.secteur,
-        superficie: validation.data.superficie,
-        prixEstime: validation.data.prix_estime,
-        formuleSuggeree: validation.data.formule_suggeree,
-        score_risque: validation.data.score_risque,
-      }
-    })
-  }).catch(() => {}) // non-blocking, ignore errors
+  // Envoi emails — non-bloquant
+  try {
+    const { sendLeadEmails } = await import("@/lib/emails");
+    await sendLeadEmails(
+      validation.data.email,
+      validation.data.secteur,
+      validation.data.superficie,
+      validation.data.frequence,
+      validation.data.formule_suggeree,
+      validation.data.prix_estime,
+      typeof payload.prix_bas === 'number' ? payload.prix_bas : null,
+      typeof payload.prix_haut === 'number' ? payload.prix_haut : null,
+    );
+  } catch (emailErr) {
+    console.error('EMAIL LEAD ERROR:', emailErr);
+  }
 
   return NextResponse.json({
     saved: true,
@@ -101,7 +109,6 @@ function validateLead(payload: LeadPayload):
         curatives: boolean;
         prix_estime: number;
         formule_suggeree: "essentiel" | "serenite";
-        score_risque: number | null;
       };
     }
   | { ok: false; message: string } {
@@ -135,11 +142,6 @@ function validateLead(payload: LeadPayload):
   const typedFrequence = frequence as Frequence;
   const formule = formuleSuggeree(payload.curatives, typedFrequence);
 
-  const scoreRisque =
-    typeof payload.score_risque === "number" && payload.score_risque >= 0 && payload.score_risque <= 10
-      ? payload.score_risque
-      : null;
-
   return {
     ok: true,
     data: {
@@ -148,10 +150,8 @@ function validateLead(payload: LeadPayload):
       superficie,
       frequence: typedFrequence,
       curatives: payload.curatives,
-      prix_estime:
-        typeof payload.prix_estime === "number" ? payload.prix_estime : 0,
+      prix_estime: typeof payload.prix_estime === "number" ? payload.prix_estime : 0,
       formule_suggeree: formule,
-      score_risque: scoreRisque,
     }
   };
 }

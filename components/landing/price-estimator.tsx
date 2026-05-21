@@ -62,21 +62,30 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
   const [email, setEmail]           = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage]       = useState("");
-  const [prixCalcule, setPrixCalcule] = useState<number>(() =>
-    calculerPrixSimple("restaurant", SUPERFICIE_CONFIG["restaurant"].defaultValue, 4, true)
-  );
+  const [prixCalcule, setPrixCalcule] = useState<number>(1200);
+  const [prixBas, setPrixBas]         = useState<number>(1100);
+  const [prixHaut, setPrixHaut]       = useState<number>(1350);
 
   // When sector changes → reset superficie to sector default
   useEffect(() => {
     setSuperficie(SUPERFICIE_CONFIG[secteur].defaultValue);
   }, [secteur]);
 
-  // Recalculer le prix à chaque changement de paramètre
+  // Recalculer le prix à chaque changement — fourchette ±10%
   useEffect(() => {
-    if (secteur && superficie && frequence) {
-      const prix = calculerPrixSimple(secteur, superficie, frequence, curatives)
-      setPrixCalcule(prix)
-    }
+    if (!secteur) return;
+    const base: Record<string, number> = {
+      restaurant: 9, hotel: 11, entrepot: 1.5,
+      agroalimentaire: 2, immeuble: 1, bureau: 0.8,
+    };
+    const freq: Record<number, number> = { 4: 1, 6: 1.3, 12: 1.8 };
+    const montant = (base[secteur] ?? 5) * superficie * (freq[frequence] ?? 1) * (curatives ? 1.25 : 1);
+    const arrondi = Math.max(600, Math.ceil(montant / 50) * 50);
+    const bas     = Math.max(600, Math.ceil(arrondi * 0.9 / 50) * 50);
+    const haut    = Math.ceil(arrondi * 1.1 / 50) * 50;
+    setPrixCalcule(arrondi);
+    setPrixBas(bas);
+    setPrixHaut(haut);
   }, [secteur, superficie, frequence, curatives]);
 
   const cfg = SUPERFICIE_CONFIG[secteur];
@@ -109,6 +118,8 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
           curatives,
           nuisible,
           prix_estime:      prixCalcule,
+          prix_bas:         prixBas,
+          prix_haut:        prixHaut,
           formule_suggeree: formule,
         }),
       });
@@ -301,15 +312,18 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
           <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
             Tarif estimé
           </p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-4xl font-black" style={{ color: "#F26522" }}>
-              {euroFormatter.format(prixCalcule)}
+          <div className="mt-2">
+            <span className="text-3xl font-black" style={{ color: "#F26522" }}>
+              {euroFormatter.format(prixBas)}
             </span>
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
+            <span className="text-xl font-black mx-2" style={{ color: "rgba(255,255,255,0.4)" }}>—</span>
+            <span className="text-3xl font-black" style={{ color: "#F26522" }}>
+              {euroFormatter.format(prixHaut)}
+            </span>
+            <span className="text-sm ml-2" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
           </div>
-          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-            soit <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(prixCalcule / frequence))}</strong> / passage ·{" "}
-            <strong style={{ color: "white" }}>{euroFormatter.format(Math.round(prixCalcule / 12))}</strong> / mois
+          <p className="mt-1 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+            Estimation indicative · Devis précis par email
           </p>
         </div>
 
@@ -390,15 +404,15 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
               <p className="text-xs font-semibold mb-1" style={{ color: "rgba(255,255,255,0.5)" }}>
                 Votre estimation personnalisée
               </p>
-              <p className="text-3xl font-black" style={{ color: "#F26522" }}>
-                {euroFormatter.format(prixCalcule)}
+              <p className="text-2xl font-black" style={{ color: "#F26522" }}>
+                Entre {euroFormatter.format(prixBas)} et {euroFormatter.format(prixHaut)}
                 <span className="text-sm font-medium ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>/an HT</span>
               </p>
               <p className="text-sm mt-1 font-semibold text-white">
                 Formule {formule === "serenite" ? "Sérénité" : "Essentiel"} recommandée
               </p>
               <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-                soit {euroFormatter.format(Math.round(prixCalcule / frequence))}/passage · {euroFormatter.format(Math.round(prixCalcule / 12))}/mois
+                Votre devis précis vous sera envoyé sous 24h
               </p>
             </div>
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>

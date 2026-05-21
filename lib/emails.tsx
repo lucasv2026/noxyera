@@ -5,6 +5,8 @@ import { WelcomeEmail } from '../emails/WelcomeEmail'
 import { RapportEmail } from '../emails/RapportEmail'
 import { RappelEmail } from '../emails/RappelEmail'
 import { AuditNotifEmail } from '../emails/AuditNotifEmail'
+import { LeadEmail, LeadNotifAdmin } from '../emails/LeadEmail'
+import { CandidatureConfirmEmail } from '../emails/CandidatureConfirmEmail'
 
 console.log('RESEND KEY:', process.env.RESEND_API_KEY ? 'présente' : 'MANQUANTE')
 
@@ -58,5 +60,81 @@ export async function sendAuditNotifEmail(props: { nomEtablissement: string; adr
     return result
   } catch (err) {
     console.error('EMAIL ERROR audit notif:', err)
+  }
+}
+
+// ── Lead estimateur : email prospect + notif admin ────────────────────────────
+export async function sendLeadEmails(
+  email: string,
+  secteur: string,
+  superficie: number,
+  frequence: number,
+  formule: string,
+  prixEstime: number,
+  prixBas?: number | null,
+  prixHaut?: number | null,
+) {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[Email mock] lead emails to', email)
+    return
+  }
+
+  const bas  = prixBas  ?? Math.max(600, Math.ceil(prixEstime * 0.9 / 50) * 50)
+  const haut = prixHaut ?? Math.ceil(prixEstime * 1.1 / 50) * 50
+
+  // Email au prospect
+  try {
+    const htmlProspect = await render(React.createElement(LeadEmail, {
+      email, secteur, superficie, frequence, formule, prixBas: bas, prixHaut: haut,
+    }))
+    const r1 = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: `Votre estimation Noxyera — ${bas.toLocaleString('fr-FR')} € à ${haut.toLocaleString('fr-FR')} €/an`,
+      html: htmlProspect,
+    })
+    console.log('EMAIL SENT lead prospect:', JSON.stringify(r1))
+  } catch (err) {
+    console.error('EMAIL ERROR lead prospect:', err)
+  }
+
+  // Notif admin
+  try {
+    const htmlAdmin = await render(React.createElement(LeadNotifAdmin, {
+      email, secteur, superficie, frequence, formule, prixEstime, prixBas: bas, prixHaut: haut,
+    }))
+    const r2 = await resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `🔔 Nouveau lead — ${secteur} ${superficie}m²`,
+      html: htmlAdmin,
+    })
+    console.log('EMAIL SENT lead admin notif:', JSON.stringify(r2))
+  } catch (err) {
+    console.error('EMAIL ERROR lead admin notif:', err)
+  }
+}
+
+// ── Confirmation candidature technicien ───────────────────────────────────────
+export async function sendCandidatureConfirmEmail(
+  to: string,
+  props: { prenom: string; ville: string; experience: string; certifications?: string[]; disponibilite: string }
+) {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[Email mock] candidature confirm to', to)
+    return
+  }
+  try {
+    const html = await render(React.createElement(CandidatureConfirmEmail, props))
+    const result = await resend.emails.send({
+      from: FROM,
+      to,
+      subject: 'Votre candidature Noxyera a bien été reçue',
+      html,
+    })
+    console.log('EMAIL SENT candidature confirm:', JSON.stringify(result))
+    return result
+  } catch (err) {
+    console.error('EMAIL ERROR candidature confirm:', err)
   }
 }

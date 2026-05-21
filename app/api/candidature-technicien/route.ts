@@ -60,18 +60,16 @@ export async function POST(request: Request) {
       Sentry.captureException(dbErr)
     }
 
-    // Send notification email
+    // Email confirmation au candidat + notif admin
     try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      if (process.env.RESEND_API_KEY) {
-        await resend.emails.send({
-          from: 'Noxyera <bonjour@noxyera.com>',
-          to: 'recrutement@noxyera.com',
-          subject: `Nouvelle candidature technicien — ${data.prenom} ${data.nom}`,
-          html: `<p>Nouvelle candidature de ${data.prenom} ${data.nom}</p><p>Email: ${data.email}</p><p>Ville: ${data.ville} (${data.code_postal})</p><p>Expérience: ${data.experience}</p><p>Disponibilité: ${data.disponibilite}</p><p>Motivation: ${data.motivation || 'Non renseignée'}</p>`,
-        })
-      }
+      const { sendCandidatureConfirmEmail } = await import('@/lib/emails')
+      await sendCandidatureConfirmEmail(data.email, {
+        prenom:         data.prenom,
+        ville:          data.ville,
+        experience:     data.experience,
+        certifications: data.certifications,
+        disponibilite:  data.disponibilite,
+      })
     } catch (emailErr) {
       Sentry.captureException(emailErr)
     }
