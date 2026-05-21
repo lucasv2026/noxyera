@@ -57,10 +57,11 @@ export async function POST(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 
+  console.log('INSERTING LEAD:', JSON.stringify(validation.data))
   const { error } = await supabase.from("leads").insert(validation.data);
 
   if (error) {
-    console.error('LEAD INSERT ERROR:', JSON.stringify(error))
+    console.error('SUPABASE ERROR:', JSON.stringify(error))
     // Ne pas bloquer l'UX — l'estimation a déjà été calculée
     return NextResponse.json({ success: true, saved: false, message: "Estimation calculée." })
   }
