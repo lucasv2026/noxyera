@@ -84,16 +84,21 @@ export function LeadEmail({ email, secteur, superficie, frequence, formule, prix
         </tbody>
       </table>
 
-      <Text style={{ color: '#1A1A1A', fontSize: '14px', margin: '0 0 24px' }}>
-        Notre équipe va étudier votre dossier et vous envoyer un devis personnalisé sous 24h.
-        Pour accélérer le process, prenez directement rendez-vous :
+      <Hr style={{ borderColor: '#F0F0F0', margin: '24px 0' }} />
+
+      <Text style={{ color: '#1B3A2D', fontSize: '16px', fontWeight: 'bold', margin: '0 0 8px' }}>
+        L&apos;étape suivante : votre audit gratuit
+      </Text>
+      <Text style={{ color: '#6B7280', fontSize: '14px', margin: '0 0 20px' }}>
+        Pour obtenir un devis exact et un plan de traitement personnalisé, nous proposons un audit gratuit de votre établissement.
+        Cela commence par une analyse à distance qui nous permet de comprendre vos besoins avant l&apos;intervention d&apos;un technicien sur site.
       </Text>
 
       <Button
-        href={`mailto:lucas@agencenikita.com?subject=Devis Noxyera — ${secteurLabel} ${superficie}m²&body=Bonjour Lucas,%0A%0AJe souhaite obtenir un devis pour mon établissement.%0A%0AEmail : ${email}%0ASecteur : ${secteurLabel}%0ASuperficie : ${superficie}m²%0A`}
+        href={`https://noxyera.vercel.app/audit?secteur=${secteur}&superficie=${superficie}`}
         style={{ backgroundColor: '#F26522', color: '#FFFFFF', padding: '14px 32px', borderRadius: '8px', fontWeight: 'bold', display: 'block', textAlign: 'center' as const, textDecoration: 'none' }}
       >
-        Prendre rendez-vous →
+        Faire mon audit gratuit →
       </Button>
 
       <Hr style={{ borderColor: '#F0F0F0', margin: '32px 0' }} />

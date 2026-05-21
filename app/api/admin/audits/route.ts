@@ -86,5 +86,23 @@ export async function PATCH(request: Request) {
     }
   }
 
+  // Créer l'intervention avec statut='proposee' pour le technicien
+  if (statut === "audit planifié" && technicien_id && date_audit_prevue) {
+    try {
+      const { data: auditForIntervention } = await supabase.from("audits").select("nom_etablissement, adresse").eq("id", id).single()
+      await supabase.from("interventions").insert({
+        technicien_id,
+        type: "audit",
+        date_prevue: date_audit_prevue,
+        statut: "proposee",
+        notes: auditForIntervention
+          ? `${auditForIntervention.nom_etablissement} - ${auditForIntervention.adresse}`
+          : "Audit gratuit suite à demande client",
+      })
+    } catch (interventionErr) {
+      console.error("CREATE INTERVENTION ERROR:", interventionErr)
+    }
+  }
+
   return NextResponse.json({ success: !error });
 }

@@ -297,10 +297,10 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
             Estimation gratuite
           </p>
           <h3 className="text-xl font-bold text-white mb-3 leading-snug">
-            Recevez votre estimation personnalisée
+            Recevez votre devis gratuit
           </h3>
           <p className="text-sm mb-6 leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
-            Secteur, superficie, fréquence — nous calculons votre tarif exact et vous l&apos;envoyons par email avec une analyse de votre zone.
+            Estimez votre tarif annuel en 60 secondes selon votre secteur, votre surface et la fréquence de passage souhaitée. Vous recevez votre devis personnalisé immédiatement par email.
           </p>
 
           {submitState === "success" ? (
@@ -341,18 +341,13 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
                 style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
               >
                 {submitState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Recevoir mon estimation →
+                Recevoir mon devis gratuit →
               </button>
               {submitState === "error" && message && (
                 <p className="text-xs text-orange-300">{message}</p>
               )}
               <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.35)" }}>
-                <Link
-                  href={`/audit?secteur=${secteur}&superficie=${superficie}&frequence=${frequence}`}
-                  style={{ color: "rgba(255,255,255,0.55)", textDecoration: "underline" }}
-                >
-                  Puis demandez votre audit gratuit
-                </Link>{" "}· Réponse sous 24h
+                Estimation gratuite · Sans engagement · Réponse immédiate
               </p>
             </form>
           )}

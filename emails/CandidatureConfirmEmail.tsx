@@ -17,12 +17,6 @@ const EXPERIENCE_LABELS: Record<string, string> = {
   '5ans+':  'Plus de 5 ans',
 }
 
-const DISPO_LABELS: Record<string, string> = {
-  'temps-plein':  'Temps plein',
-  'temps-partiel':'Temps partiel',
-  'week-ends':    'Week-ends',
-  'flexible':     'Flexible',
-}
 
 export function CandidatureConfirmEmail({ prenom, ville, experience, certifications, disponibilite }: Props) {
   return (
@@ -30,23 +24,20 @@ export function CandidatureConfirmEmail({ prenom, ville, experience, certificati
       <Heading style={{ color: '#1B3A2D', fontSize: '22px', margin: '0 0 8px' }}>
         Bonjour {prenom},
       </Heading>
-      <Text style={{ color: '#6B7280', margin: '0 0 24px', fontSize: '15px' }}>
-        Nous avons bien reçu votre candidature pour rejoindre le réseau Noxyera.
-        Notre équipe l&apos;examine et revient vers vous sous <strong style={{ color: '#1B3A2D' }}>48h</strong>.
+      <Text style={{ color: '#6B7280', margin: '0 0 16px', fontSize: '15px' }}>
+        Nous avons bien reçu votre candidature pour rejoindre le réseau de techniciens Noxyera. Merci de votre intérêt.
       </Text>
 
-      {/* Récap candidature */}
       <table width="100%" style={{ backgroundColor: '#F5F0E8', borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
         <tbody>
           <tr>
             <td style={{ color: '#6B7280', fontSize: '11px', textTransform: 'uppercase' as const, letterSpacing: '1px', paddingBottom: '12px' }} colSpan={2}>
-              VOTRE PROFIL
+              RÉCAP DE VOTRE CANDIDATURE
             </td>
           </tr>
           {[
             ['Zone',          ville],
             ['Expérience',    EXPERIENCE_LABELS[experience] ?? experience],
-            ['Disponibilité', DISPO_LABELS[disponibilite] ?? disponibilite],
             ...(certifications && certifications.length > 0
               ? [['Certifications', certifications.join(', ')]]
               : []),
@@ -59,21 +50,20 @@ export function CandidatureConfirmEmail({ prenom, ville, experience, certificati
         </tbody>
       </table>
 
-      <Text style={{ color: '#1A1A1A', fontSize: '14px', margin: '0 0 8px' }}>
-        En attendant, découvrez comment fonctionne notre plateforme :
+      <Text style={{ color: '#1A1A1A', fontSize: '14px', margin: '0 0 16px' }}>
+        Notre équipe étudie votre dossier et reviendra vers vous sous <strong>48h</strong>.
+        Si votre profil correspond à nos besoins actuels, nous vous proposerons un échange téléphonique.
       </Text>
 
-      <Button
-        href="https://noxyera.com/techniciens"
-        style={{ backgroundColor: '#1B3A2D', color: '#FFFFFF', padding: '14px 32px', borderRadius: '8px', fontWeight: 'bold', display: 'block', textAlign: 'center' as const, textDecoration: 'none' }}
-      >
-        Découvrir la plateforme →
-      </Button>
+      <Text style={{ color: '#1A1A1A', fontSize: '14px', margin: '0 0 20px' }}>
+        En attendant, vous pouvez nous contacter directement :{' '}
+        <a href="mailto:lucas@agencenikita.com" style={{ color: '#F26522' }}>lucas@agencenikita.com</a>
+      </Text>
 
-      <Hr style={{ borderColor: '#F0F0F0', margin: '32px 0' }} />
+      <Hr style={{ borderColor: '#F0F0F0', margin: '24px 0' }} />
       <Text style={{ color: '#9CA3AF', fontSize: '13px', margin: 0 }}>
         L&apos;équipe Noxyera<br />
-        <span style={{ color: '#6B7280' }}>contact@noxyera.com · noxyera.com</span>
+        <span style={{ color: '#6B7280' }}>lucas@agencenikita.com · noxyera.com</span>
       </Text>
     </EmailLayout>
   )

@@ -302,6 +302,18 @@ function AuditFormContent() {
         </p>
       </div>
 
+      {/* Bandeau explicatif */}
+      <div style={{
+        background: '#FFF8F0', border: '1px solid #F5E0C8', borderRadius: 12,
+        padding: '14px 20px', marginBottom: 28,
+        display: 'flex', gap: 12, alignItems: 'flex-start',
+      }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>ℹ️</span>
+        <p style={{ margin: 0, fontSize: 14, color: '#6B4A2A', lineHeight: 1.6 }}>
+          <strong>Cet audit en ligne est une pré-analyse.</strong> Il sera complété par la visite d&apos;un technicien certifié sur votre site sous 48h pour un diagnostic complet et un plan de traitement précis.
+        </p>
+      </div>
+
       <ProgressBar step={step} />
 
       <form onSubmit={handleSubmit}>

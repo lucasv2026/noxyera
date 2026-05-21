@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Smartphone, Wrench, Users, Euro, Shield, TrendingUp, CheckCircle, Check, Star } from 'lucide-react'
+import { Smartphone, Euro, TrendingUp, CheckCircle, Check, MapPin, FileText, Calendar } from 'lucide-react'
 import { MegaMenu } from '@/components/MegaMenu'
 
 const inputStyle: React.CSSProperties = {
@@ -172,8 +172,8 @@ export default function TechniciensPage() {
               },
               {
                 num: 3,
-                title: 'Formation Noxyera',
-                desc: 'Formation complète offerte : protocoles, outils, applications Noxyera.',
+                title: 'Prise en main de l\'application',
+                desc: 'Accès à l\'app Noxyera pour gérer vos tournées, générer vos rapports et suivre vos paiements.',
               },
               {
                 num: 4,
@@ -198,30 +198,23 @@ export default function TechniciensPage() {
         </div>
       </section>
 
-      {/* ── Ce qu'on vous fournit ── */}
+      {/* ── Ce que Noxyera vous apporte ── */}
       <section id="avantages" style={{ background: 'white', padding: '80px 24px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, color: '#1B3A2D', textAlign: 'center', marginBottom: 56 }}>
-            Ce qu&apos;on vous fournit
+            Ce que Noxyera vous apporte
           </h2>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
             {[
-              { Icon: Smartphone, title: 'Application mobile', desc: 'Tournées optimisées, rapports en 1 clic, historique client complet.' },
-              { Icon: Wrench, title: 'Équipement professionnel', desc: 'Kit de démarrage fourni : produits homologués, EPI, matériel de détection.' },
-              { Icon: Users, title: 'Clients récurrents', desc: 'Contrats annuels HACCP = revenus stables et prévisibles.' },
-              { Icon: Euro, title: 'Facturation simplifiée', desc: 'On gère tout : facturation, relances, encaissements. Vous vous concentrez sur les interventions.' },
-              { Icon: Shield, title: 'Assurance RC Pro', desc: 'Couverture RC Pro incluse pour toutes vos interventions Noxyera.' },
-              { Icon: TrendingUp, title: 'Évolution possible', desc: 'Les meilleurs techniciens peuvent devenir responsables secteur.' },
+              { Icon: MapPin, title: 'Des missions dans votre zone', desc: 'Interventions régulières à moins de 30 min de chez vous. Zéro prospection, on gère le commercial.' },
+              { Icon: Smartphone, title: 'Une application simple', desc: 'Gérez vos tournées, signalez vos arrivées et complétez vos rapports depuis votre téléphone.' },
+              { Icon: FileText, title: 'Rapports HACCP automatiques', desc: 'L\'application génère les rapports conformes après chaque intervention. Aucune saisie manuelle.' },
+              { Icon: Euro, title: 'Paiement sous 48h', desc: 'Après chaque mission validée, vous êtes payé sous 48h. Sans attendre les clients.' },
+              { Icon: Calendar, title: 'Visibilité à 30 jours', desc: 'Consultez votre planning à 30 jours. Acceptez ou refusez des missions selon vos disponibilités.' },
+              { Icon: TrendingUp, title: 'Zéro administratif', desc: 'Facturation, relances, contrats — on s\'en occupe. Vous vous concentrez sur votre métier.' },
             ].map(({ Icon, title, desc }) => (
-              <div key={title} style={{
-                border: '1px solid #E5E7EB', borderRadius: 12, padding: '24px',
-                display: 'flex', gap: 16, alignItems: 'flex-start',
-              }}>
-                <div style={{
-                  width: 44, height: 44, background: '#F5F0E8', borderRadius: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
+              <div key={title} style={{ border: '1px solid #E5E7EB', borderRadius: 12, padding: '24px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{ width: 44, height: 44, background: '#F5F0E8', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon size={20} style={{ color: '#1B3A2D' }} />
                 </div>
                 <div>
@@ -234,50 +227,26 @@ export default function TechniciensPage() {
         </div>
       </section>
 
-      {/* ── Profil recherché ── */}
+      {/* ── Ce qu'on attend de vous ── */}
       <section id="profil" style={{ background: '#F9F7F4', padding: '80px 24px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, color: '#1B3A2D', textAlign: 'center', marginBottom: 48 }}>
-            Le profil que nous recherchons
+            Ce qu&apos;on attend de vous
           </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32, marginBottom: 32 }}>
-            {/* Indispensable */}
-            <div style={{ background: 'white', borderRadius: 12, padding: '28px', border: '1px solid #E5E7EB' }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1B3A2D', margin: '0 0 20px' }}>Indispensable</h3>
-              {[
-                'Permis B + véhicule',
-                'Sérieux et ponctuel',
-                'À l\'aise avec smartphone',
-                'Capacité à travailler seul',
-              ].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <Check size={16} color="#22C55E" />
-                  <span style={{ fontSize: 15, color: '#1A1A1A' }}>{item}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Un plus */}
-            <div style={{ background: 'white', borderRadius: 12, padding: '28px', border: '1px solid #E5E7EB' }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1B3A2D', margin: '0 0 20px' }}>Un plus</h3>
-              {[
-                'Certiphyto ou HACCP',
-                'Expérience restauration/industrie',
-                'Bilingue (FR/EN)',
-                'Réseau pro dans le secteur',
-              ].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <Star size={14} color="#F26522" fill="#F26522" />
-                  <span style={{ fontSize: 15, color: '#1A1A1A' }}>{item}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ background: 'white', borderRadius: 16, padding: '36px', border: '1px solid #E5E7EB', maxWidth: 560, margin: '0 auto' }}>
+            {[
+              'Certification Certibiocide à jour (obligatoire)',
+              'RC Pro couvrant les interventions biocides',
+              'Votre propre matériel et véhicule',
+              'Minimum 1 an d\'expérience en désinsectisation',
+              'Disponibilité réactive (24-48h pour les urgences)',
+            ].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 18 }}>
+                <Check size={18} color="#22C55E" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ fontSize: 15, color: '#1A1A1A', lineHeight: 1.5 }}>{item}</span>
+              </div>
+            ))}
           </div>
-
-          <p style={{ textAlign: 'center', fontSize: 15, fontStyle: 'italic', color: '#6B7280' }}>
-            Débutants acceptés — formation complète assurée par Noxyera
-          </p>
         </div>
       </section>
 

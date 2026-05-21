@@ -9,6 +9,7 @@ import {
 } from "@/lib/demo-data"
 import type { Profile } from "@/lib/types/dashboard"
 import { RapportSuccessBanner } from "@/components/technicien/RapportSuccessBanner"
+import { MissionsProposees } from "@/components/technicien/MissionsProposees"
 
 const TYPE_CONFIG = {
   preventif: { label: "Préventif",  bg: "#D1FAE5", color: "#065F46" },
@@ -110,12 +111,15 @@ export default async function MissionsPage() {
       {/* Header */}
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#1B3A2D", margin: 0 }}>
-          Mes missions
+          Mon planning
         </h1>
         <p style={{ fontSize: "14px", color: "#F26522", fontWeight: 600, marginTop: "4px", marginBottom: 0 }}>
           {todayDisplay}
         </p>
       </div>
+
+      {/* Missions proposées */}
+      <MissionsProposees technicienId={profile.id} />
 
       {/* Missions aujourd'hui */}
       <section style={{ marginBottom: "40px" }}>
