@@ -7,6 +7,8 @@ import { RappelEmail } from '../emails/RappelEmail'
 import { AuditNotifEmail } from '../emails/AuditNotifEmail'
 import { LeadEmail, LeadNotifAdmin } from '../emails/LeadEmail'
 import { CandidatureConfirmEmail } from '../emails/CandidatureConfirmEmail'
+import { AuditClientEmail } from '../emails/AuditClientEmail'
+import { AuditAssignEmail, AuditAdminNotifEmail } from '../emails/AuditAssignEmail'
 
 console.log('RESEND KEY:', process.env.RESEND_API_KEY ? 'présente' : 'MANQUANTE')
 
@@ -113,6 +115,61 @@ export async function sendLeadEmails(
   } catch (err) {
     console.error('EMAIL ERROR lead admin notif:', err)
   }
+}
+
+// ── Audit : confirmation client ──────────────────────────────────────────────
+export async function sendAuditClientEmail(
+  to: string,
+  props: { prenom: string; nomEtablissement: string; adresse: string; secteur: string; creneaux: string[]; jours: string[] }
+) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] audit client to', to); return }
+  try {
+    const html = await render(React.createElement(AuditClientEmail, props))
+    const result = await resend.emails.send({ from: FROM, to, subject: `Votre demande d'audit Noxyera — ${props.nomEtablissement}`, html })
+    console.log('EMAIL SENT audit client:', JSON.stringify(result))
+    return result
+  } catch (err) { console.error('EMAIL ERROR audit client:', err) }
+}
+
+// ── Audit : notif admin (nouvelle demande) ────────────────────────────────────
+export async function sendAuditAdminNotif(props: {
+  nomEtablissement: string; adresse: string; secteur: string; superficie: number;
+  prenom: string; nom: string; email: string; telephone: string;
+  historiqueNuisibles: string; prestataireActuel: boolean; rapportsAJour: string;
+  zonesSensibles: string[]; creneaux: string[]; jours: string[]
+}) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] audit admin notif'); return }
+  try {
+    const html = await render(React.createElement(AuditAdminNotifEmail, props))
+    const result = await resend.emails.send({ from: FROM, to: ADMIN_EMAIL, subject: `🔔 Nouvelle demande d'audit — ${props.nomEtablissement}`, html })
+    console.log('EMAIL SENT audit admin notif:', JSON.stringify(result))
+    return result
+  } catch (err) { console.error('EMAIL ERROR audit admin notif:', err) }
+}
+
+// ── Audit : assignation technicien ────────────────────────────────────────────
+export async function sendAuditAssignEmail(
+  to: string,
+  props: {
+    nomTechnicien: string; nomEtablissement: string; adresse: string; secteur: string;
+    superficie: number; zonesSensibles: string[]; creneaux: string[]; jours: string[];
+    dateAuditPrevue?: string
+  }
+) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] audit assign to', to); return }
+  try {
+    const html = await render(React.createElement(AuditAssignEmail, {
+      ...props,
+      appUrl: `${SITE_URL}/technicien/missions`,
+    }))
+    const result = await resend.emails.send({
+      from: FROM, to,
+      subject: `Nouvelle mission d'audit — ${props.nomEtablissement}`,
+      html,
+    })
+    console.log('EMAIL SENT audit assign:', JSON.stringify(result))
+    return result
+  } catch (err) { console.error('EMAIL ERROR audit assign:', err) }
 }
 
 // ── Confirmation candidature technicien ───────────────────────────────────────

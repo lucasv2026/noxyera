@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, type FormEvent } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   Building2,
@@ -418,14 +419,14 @@ export function PriceEstimator({ defaultSecteur }: PriceEstimatorProps) {
             <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Check size={12} /> Estimation envoyée à {email}</span>
             </p>
-            <a
-              href="mailto:contact@noxyera.com?subject=Demande audit gratuit Noxyera"
+            <Link
+              href={`/audit?secteur=${secteur}&superficie=${superficie}&frequence=${frequence}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition-all hover:opacity-90"
               style={{ background: "#F26522", boxShadow: "0 4px 12px rgba(242,101,34,0.4)" }}
             >
-              Prendre rendez-vous pour un audit gratuit
+              Demander mon audit gratuit →
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="px-6 py-5 space-y-3">
