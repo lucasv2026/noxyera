@@ -47,13 +47,9 @@ export default function LoginPage() {
       .eq("user_id", data.user?.id)
       .maybeSingle();
 
-    const redirect =
-      profile?.role === "admin"      ? "/admin"
-      : profile?.role === "technicien" ? "/technicien/missions"
-      : "/dashboard";
-
-    router.push(redirect);
-    router.refresh();
+    // Full reload nécessaire pour que les cookies Supabase SSR
+    // soient propagés au middleware avant la navigation
+    window.location.href = "/dashboard";
   }
 
   return (

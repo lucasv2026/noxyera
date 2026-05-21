@@ -50,8 +50,7 @@ export default function EspaceTechnicienPage() {
       return;
     }
 
-    router.push("/technicien/missions");
-    router.refresh();
+    window.location.href = "/technicien/missions";
   }
 
   return (
