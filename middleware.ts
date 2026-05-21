@@ -7,6 +7,11 @@ import {
 } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
+  // admin-noxyera uses its own cookie-based auth — never intercept with Supabase middleware
+  if (request.nextUrl.pathname.startsWith('/admin-noxyera')) {
+    return NextResponse.next()
+  }
+
   const protectedRoute = getProtectedRoute(request.nextUrl.pathname);
 
   if (!protectedRoute) {
@@ -42,8 +47,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/technicien/:path*",
-    "/admin/:path*"
-  ]
+    '/((?!admin-noxyera|api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };
