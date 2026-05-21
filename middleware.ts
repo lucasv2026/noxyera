@@ -75,31 +75,29 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ── Client non connecté ─────────────────────────────────────────────────
+  // ── Utilisateur non connecté ────────────────────────────────────────────
   if (!user) {
     const loginPath = isTechnicienRoute ? "/espace-technicien" : "/login";
-    const redirectUrl = new URL(loginPath, request.url);
-    const redirectResponse = NextResponse.redirect(redirectUrl);
-    // Transférer les cookies de session
+    const redirectResponse = NextResponse.redirect(new URL(loginPath, request.url));
     response.cookies.getAll().forEach((c) => redirectResponse.cookies.set(c));
     return redirectResponse;
   }
 
-  // ── Vérification du rôle ────────────────────────────────────────────────
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // ── Vérification du rôle pour technicien uniquement ─────────────────────
+  // Pour /dashboard : tout utilisateur authentifié est accepté
+  // (le dashboard gère lui-même l'affichage selon le rôle)
+  if (isTechnicienRoute) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  const expectedRole = isTechnicienRoute ? "technicien" : "client";
-
-  if (profile?.role !== expectedRole) {
-    const loginPath = isTechnicienRoute ? "/espace-technicien" : "/login";
-    const redirectUrl = new URL(loginPath, request.url);
-    const redirectResponse = NextResponse.redirect(redirectUrl);
-    response.cookies.getAll().forEach((c) => redirectResponse.cookies.set(c));
-    return redirectResponse;
+    if (profile?.role !== "technicien") {
+      const redirectResponse = NextResponse.redirect(new URL("/espace-technicien", request.url));
+      response.cookies.getAll().forEach((c) => redirectResponse.cookies.set(c));
+      return redirectResponse;
+    }
   }
 
   return response;
