@@ -97,10 +97,15 @@ export async function POST(request: Request) {
       const { sendCandidatureConfirmEmail } = await import('@/lib/emails')
       await sendCandidatureConfirmEmail(data.email, {
         prenom:         data.prenom,
+        nom:            data.nom,
+        telephone:      data.telephone,
         ville:          data.ville,
+        code_postal:    data.code_postal,
         experience:     data.experience,
         certifications: data.certifications,
+        vehicule:       data.vehicule,
         disponibilite:  data.disponibilite,
+        motivation:     data.motivation,
       })
     } catch (emailErr) {
       console.error('EMAIL CANDIDATURE CONFIRM ERROR:', emailErr)

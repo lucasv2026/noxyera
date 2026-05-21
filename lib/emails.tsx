@@ -197,7 +197,7 @@ export async function sendAuditPlanifieClientEmail(
 // ── Confirmation candidature technicien ───────────────────────────────────────
 export async function sendCandidatureConfirmEmail(
   to: string,
-  props: { prenom: string; ville: string; experience: string; certifications?: string[]; disponibilite: string }
+  props: { prenom: string; nom: string; telephone: string; ville: string; code_postal: string; experience: string; certifications?: string[]; vehicule: boolean; disponibilite: string; motivation?: string }
 ) {
   if (!process.env.RESEND_API_KEY) {
     console.log('[Email mock] candidature confirm to', to)

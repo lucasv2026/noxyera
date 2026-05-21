@@ -4,10 +4,15 @@ import { EmailLayout } from './components/EmailLayout'
 
 interface Props {
   prenom: string
+  nom: string
+  telephone: string
   ville: string
+  code_postal: string
   experience: string
   certifications?: string[]
+  vehicule: boolean
   disponibilite: string
+  motivation?: string
 }
 
 const EXPERIENCE_LABELS: Record<string, string> = {
@@ -17,8 +22,26 @@ const EXPERIENCE_LABELS: Record<string, string> = {
   '5ans+':  'Plus de 5 ans',
 }
 
+const DISPONIBILITE_LABELS: Record<string, string> = {
+  'temps-plein':  'Temps plein',
+  'temps-partiel': 'Temps partiel',
+  'week-ends':    'Week-ends',
+  'flexible':     'Flexible',
+}
 
-export function CandidatureConfirmEmail({ prenom, ville, experience, certifications, disponibilite }: Props) {
+export function CandidatureConfirmEmail({ prenom, nom, telephone, ville, code_postal, experience, certifications, vehicule, disponibilite, motivation }: Props) {
+  const rows: [string, string][] = [
+    ['Nom complet',    `${prenom} ${nom}`],
+    ['Téléphone',      telephone],
+    ['Ville',          `${ville} (${code_postal})`],
+    ['Expérience',     EXPERIENCE_LABELS[experience] ?? experience],
+    ['Disponibilité',  DISPONIBILITE_LABELS[disponibilite] ?? disponibilite],
+    ['Véhicule',       vehicule ? 'Oui' : 'Non'],
+    ...(certifications && certifications.length > 0
+      ? [['Certifications', certifications.join(', ')] as [string, string]]
+      : []),
+  ]
+
   return (
     <EmailLayout>
       <Heading style={{ color: '#1B3A2D', fontSize: '22px', margin: '0 0 8px' }}>
@@ -35,18 +58,20 @@ export function CandidatureConfirmEmail({ prenom, ville, experience, certificati
               RÉCAP DE VOTRE CANDIDATURE
             </td>
           </tr>
-          {[
-            ['Zone',          ville],
-            ['Expérience',    EXPERIENCE_LABELS[experience] ?? experience],
-            ...(certifications && certifications.length > 0
-              ? [['Certifications', certifications.join(', ')]]
-              : []),
-          ].map(([k, v]) => (
+          {rows.map(([k, v]) => (
             <tr key={k}>
               <td style={{ color: '#6B7280', padding: '6px 0', fontSize: '14px' }}>{k}</td>
               <td style={{ color: '#1B3A2D', fontWeight: 'bold', textAlign: 'right' as const, fontSize: '14px' }}>{v}</td>
             </tr>
           ))}
+          {motivation && (
+            <tr>
+              <td colSpan={2} style={{ paddingTop: '12px' }}>
+                <div style={{ color: '#6B7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>MOTIVATION</div>
+                <div style={{ color: '#1B3A2D', fontSize: '14px', lineHeight: '1.5' }}>{motivation}</div>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
 
