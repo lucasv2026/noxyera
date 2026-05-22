@@ -1,26 +1,33 @@
-import { CalendarClock, ShieldCheck, FileCheck, CreditCard, Building2 } from "lucide-react"
+import { CalendarClock, ShieldCheck, FileCheck, CreditCard, Building2, AlertTriangle } from "lucide-react"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { SUPABASE_DEMO_PROFILE, SUPABASE_DEMO_SITES } from "@/lib/demo-data"
 import type { Profile, Site } from "@/lib/types/dashboard"
 import Link from "next/link"
 
+interface RapportRow {
+  intervention_id: string
+  haccp_conforme: boolean
+  created_at: string
+}
+
 interface DashboardData {
   profile: Profile
   sites: Site[]
+  rapports: RapportRow[]
 }
 
 async function getData(): Promise<DashboardData> {
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
 
   if (isDemoMode) {
-    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES, rapports: [] }
   }
 
   try {
     const { createClient } = await import("@/lib/supabase/server")
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { profile: SUPABASE_DEMO_PROFILE, sites: [] }
+    if (!user) return { profile: SUPABASE_DEMO_PROFILE, sites: [], rapports: [] }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -28,7 +35,7 @@ async function getData(): Promise<DashboardData> {
       .eq("user_id", user.id)
       .maybeSingle()
 
-    if (!profile) return { profile: SUPABASE_DEMO_PROFILE, sites: [] }
+    if (!profile) return { profile: SUPABASE_DEMO_PROFILE, sites: [], rapports: [] }
 
     const { data: sites } = await supabase
       .from("sites")
@@ -36,9 +43,22 @@ async function getData(): Promise<DashboardData> {
       .eq("client_id", profile.id)
       .eq("statut", "actif")
 
-    return { profile: profile as Profile, sites: (sites as Site[]) ?? [] }
+    const allSites = (sites as Site[]) ?? []
+    const allInterventions = allSites.flatMap((s) => s.interventions ?? [])
+    const interventionIds = allInterventions.map((i) => i.id)
+
+    let rapports: RapportRow[] = []
+    if (interventionIds.length > 0) {
+      const { data: rapportRows } = await supabase
+        .from("rapports")
+        .select("intervention_id, haccp_conforme, created_at")
+        .in("intervention_id", interventionIds)
+      rapports = (rapportRows as RapportRow[]) ?? []
+    }
+
+    return { profile: profile as Profile, sites: allSites, rapports }
   } catch {
-    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES }
+    return { profile: SUPABASE_DEMO_PROFILE, sites: SUPABASE_DEMO_SITES, rapports: [] }
   }
 }
 
@@ -65,21 +85,52 @@ function TypeBadge({ type }: { type: string }) {
   )
 }
 
-function StatusBadge({ statut }: { statut: string }) {
-  if (statut === "actif") return (
-    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#D1FAE5", color: "#065F46" }}>
-      ● Conforme
-    </span>
-  )
+type SiteStatus = "urgent" | "bientot_du" | "conforme"
+
+function computeSiteStatus(site: Site): SiteStatus {
+  const interventions = site.interventions ?? []
+  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000
+  const fourteenDaysFromNow = Date.now() + 14 * 24 * 60 * 60 * 1000
+
+  const lastRealise = interventions
+    .filter((i) => i.statut === "realise" && i.date_reelle)
+    .sort((a, b) => (b.date_reelle ?? "").localeCompare(a.date_reelle ?? ""))[0] ?? null
+
+  const nextPlanifie = interventions
+    .filter((i) => i.statut === "planifie")
+    .sort((a, b) => a.date_prevue.localeCompare(b.date_prevue))[0] ?? null
+
+  if (!lastRealise || (lastRealise.date_reelle && new Date(lastRealise.date_reelle).getTime() < ninetyDaysAgo)) {
+    return "urgent"
+  }
+  if (nextPlanifie && new Date(nextPlanifie.date_prevue).getTime() < fourteenDaysFromNow) {
+    return "bientot_du"
+  }
+  return "conforme"
+}
+
+function SiteStatusBadge({ status }: { status: SiteStatus }) {
+  const config = {
+    urgent: { label: "Urgent", bg: "#FEE2E2", color: "#991B1B" },
+    bientot_du: { label: "Bientôt dû", bg: "#FEF3C7", color: "#92400E" },
+    conforme: { label: "Conforme", bg: "#D1FAE5", color: "#065F46" },
+  }
+  const { label, bg, color } = config[status]
   return (
-    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#FEF3C7", color: "#92400E" }}>
-      ● Bientôt dû
+    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: bg, color }}>
+      ● {label}
     </span>
   )
 }
 
+function computeHaccpScore(rapports: RapportRow[]): number {
+  if (rapports.length === 0) return 100
+  const conforme = rapports.filter((r) => r.haccp_conforme).length
+  return Math.round((conforme / rapports.length) * 100)
+}
+
 export default async function DashboardPage() {
-  const { profile, sites } = await getData()
+  const { profile, sites, rapports } = await getData()
 
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
   const todayDisplay = today.charAt(0).toUpperCase() + today.slice(1)
@@ -100,16 +151,27 @@ export default async function DashboardPage() {
     : "—"
 
   const daysLabel = nextIntervention
-    ? `dans ${daysFromNow(nextIntervention.date_prevue)} jours · Thomas Lebrun`
+    ? `dans ${daysFromNow(nextIntervention.date_prevue)} jours`
     : "Aucun planifié"
 
   const activeContract = sites[0]?.contracts?.[0]
   const contractEndLabel = activeContract ? formatDate(activeContract.date_fin) : "—"
   const formuleName = activeContract?.formule === "serenite" ? "Sérénité" : "Essentiel"
 
+  const haccpScore = computeHaccpScore(rapports)
+  const haccpLabel = haccpScore >= 90 ? "Conformité excellente" : haccpScore >= 70 ? "Conformité correcte" : "Attention requise"
+
   if (sites.length === 1) {
     // ─── VUE MONO-SITE ───────────────────────────────────────────
     const site = sites[0]
+    const siteStatus = computeSiteStatus(site)
+
+    const statusConfig = {
+      urgent: { label: "Urgent", bg: "#FEE2E2", color: "#991B1B" },
+      bientot_du: { label: "Bientôt dû", bg: "#FEF3C7", color: "#92400E" },
+      conforme: { label: "Conforme", bg: "#D1FAE5", color: "#065F46" },
+    }
+    const { label: statusLabel, bg: statusBg, color: statusColor } = statusConfig[siteStatus]
 
     return (
       <div style={{ maxWidth: "860px", margin: "0 auto", padding: "32px 32px 64px" }}>
@@ -123,8 +185,8 @@ export default async function DashboardPage() {
               {todayDisplay}
             </p>
           </div>
-          <span style={{ padding: "6px 14px", borderRadius: "20px", background: "#D1FAE5", color: "#065F46", fontSize: "13px", fontWeight: 600 }}>
-            ● Conforme
+          <span style={{ padding: "6px 14px", borderRadius: "20px", background: statusBg, color: statusColor, fontSize: "13px", fontWeight: 600 }}>
+            ● {statusLabel}
           </span>
         </div>
 
@@ -139,8 +201,8 @@ export default async function DashboardPage() {
           <StatCard
             icon={ShieldCheck}
             label="Score HACCP"
-            value="98%"
-            sub="Conformité excellente"
+            value={`${haccpScore}%`}
+            sub={haccpLabel}
             accent
           />
           <StatCard
@@ -178,14 +240,12 @@ export default async function DashboardPage() {
                       paddingBottom: idx < lastInterventions.length - 1 ? "20px" : "0",
                     }}
                   >
-                    {/* Timeline dot + line */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, paddingTop: "4px" }}>
                       <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#27AE60", border: "2px solid white", boxShadow: "0 0 0 2px #27AE60" }} />
                       {idx < lastInterventions.length - 1 && (
                         <div style={{ width: "2px", flex: 1, background: "#E5E7EB", marginTop: "4px", minHeight: "40px" }} />
                       )}
                     </div>
-                    {/* Content */}
                     <div style={{ background: "white", borderRadius: "12px", padding: "14px 18px", flex: 1, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -194,7 +254,6 @@ export default async function DashboardPage() {
                           </span>
                           <TypeBadge type={intervention.type} />
                         </div>
-                        <span style={{ fontSize: "12px", color: "#9CA3AF" }}>T. Lebrun</span>
                       </div>
                       <p style={{ fontSize: "12px", color: "#6B7280", margin: "6px 0 0" }}>
                         {siteOfInterv?.nom ?? site.nom}
@@ -225,9 +284,6 @@ export default async function DashboardPage() {
                   <p style={{ fontSize: "18px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 4px" }}>
                     {formatDate(nextIntervention.date_prevue)}
                   </p>
-                  <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 8px" }}>
-                    Thomas Lebrun · Certifié Certibiocide
-                  </p>
                   <TypeBadge type={nextIntervention.type} />
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -245,13 +301,20 @@ export default async function DashboardPage() {
   }
 
   // ─── VUE MULTI-SITES ─────────────────────────────────────────────────────────
-  const avgHaccp = sites.length > 0
-    ? Math.round(sites.reduce((acc) => acc + 94, 0) / sites.length)
-    : 94
+  const avgHaccp = haccpScore
 
   const prochainSiteNom = nextIntervention
     ? (sites.find((s) => s.interventions?.some((i) => i.id === nextIntervention.id))?.nom ?? "—")
     : "—"
+
+  // Alertes: sites where last realise was >90 days ago OR no realise at all
+  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000
+  const alertesCount = sites.filter((site) => {
+    const lastRealise = (site.interventions ?? [])
+      .filter((i) => i.statut === "realise" && i.date_reelle)
+      .sort((a, b) => (b.date_reelle ?? "").localeCompare(a.date_reelle ?? ""))[0] ?? null
+    return !lastRealise || new Date(lastRealise.date_reelle!).getTime() < ninetyDaysAgo
+  }).length
 
   return (
     <div style={{ padding: "32px 32px 64px" }}>
@@ -265,9 +328,11 @@ export default async function DashboardPage() {
             {todayDisplay}
           </p>
         </div>
-        <span style={{ padding: "6px 14px", borderRadius: "20px", background: "#D1FAE5", color: "#065F46", fontSize: "13px", fontWeight: 600 }}>
-          ● Conforme
-        </span>
+        {alertesCount > 0 && (
+          <span style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: "20px", background: "#FEE2E2", color: "#991B1B", fontSize: "13px", fontWeight: 600 }}>
+            <AlertTriangle size={13} /> {alertesCount} alerte{alertesCount > 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
       {/* 4 KPI cards */}
@@ -288,14 +353,14 @@ export default async function DashboardPage() {
           icon={ShieldCheck}
           label="Score HACCP moyen"
           value={`${avgHaccp}%`}
-          sub="sur l'ensemble des sites"
+          sub={haccpLabel}
           accent
         />
         <StatCard
-          icon={FileCheck}
+          icon={AlertTriangle}
           label="Alertes ouvertes"
-          value={0}
-          sub="Aucune anomalie"
+          value={alertesCount}
+          sub={alertesCount === 0 ? "Aucune anomalie" : `${alertesCount} site${alertesCount > 1 ? "s" : ""} à surveiller`}
         />
       </div>
 
@@ -339,13 +404,12 @@ export default async function DashboardPage() {
               const nextInterv = (site.interventions ?? [])
                 .filter((i) => i.statut === "planifie")
                 .sort((a, b) => a.date_prevue.localeCompare(b.date_prevue))[0]
-              const isExpiringSoon = contract?.date_fin
-                ? daysFromNow(contract.date_fin) < 30
-                : false
+              const siteStatus = computeSiteStatus(site)
 
               return (
-                <div
+                <Link
                   key={site.id}
+                  href={`/dashboard/sites/${site.id}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "2fr 1fr 1fr 1.5fr 1fr 80px",
@@ -353,6 +417,8 @@ export default async function DashboardPage() {
                     alignItems: "center",
                     borderBottom: idx < sites.length - 1 ? "1px solid #F9FAFB" : "none",
                     gap: "8px",
+                    textDecoration: "none",
+                    cursor: "pointer",
                   }}
                 >
                   <div>
@@ -367,23 +433,12 @@ export default async function DashboardPage() {
                     {nextInterv ? formatDate(nextInterv.date_prevue) : "—"}
                   </span>
                   <span>
-                    {isExpiringSoon ? (
-                      <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#FEF3C7", color: "#92400E" }}>
-                        ● Bientôt dû
-                      </span>
-                    ) : (
-                      <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 600, background: "#D1FAE5", color: "#065F46" }}>
-                        ● Conforme
-                      </span>
-                    )}
+                    <SiteStatusBadge status={siteStatus} />
                   </span>
-                  <Link
-                    href={`/dashboard/sites/${site.id}`}
-                    style={{ fontSize: "13px", color: "#F26522", fontWeight: 600, textDecoration: "none", textAlign: "right" }}
-                  >
+                  <span style={{ fontSize: "13px", color: "#F26522", fontWeight: 600, textAlign: "right" }}>
                     Voir →
-                  </Link>
-                </div>
+                  </span>
+                </Link>
               )
             })}
           </div>

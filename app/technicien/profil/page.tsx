@@ -1,8 +1,65 @@
 "use client"
 
-import { Phone, Check, AlertTriangle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Phone, Check, AlertTriangle, Loader2 } from "lucide-react"
+
+interface TechnicienProfilData {
+  profile: {
+    prenom: string | null
+    nom: string | null
+    email: string | null
+    telephone: string | null
+    certif_biocide_numero: string | null
+    certif_biocide_expiration: string | null
+    rc_pro_expiration: string | null
+  }
+  gainsMonth: number
+  interventionsMonth: number
+  gainsYTD: number
+  nextVirement: string
+}
+
+function formatDateExp(iso: string | null): string {
+  if (!iso) return "—"
+  return new Date(iso).toLocaleDateString("fr-FR", { month: "2-digit", year: "numeric" })
+}
+
+function formatEur(val: number): string {
+  return val.toLocaleString("fr-FR") + " €"
+}
 
 export default function TechnicienProfilPage() {
+  const [data, setData] = useState<TechnicienProfilData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/technicien/profil")
+      .then(r => r.json())
+      .then(d => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "32px 20px 64px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "300px" }}>
+        <Loader2 size={28} style={{ color: "#1B3A2D", animation: "spin 1s linear infinite" }} />
+      </div>
+    )
+  }
+
+  const profile = data?.profile
+  const prenom = profile?.prenom ?? ""
+  const nom = profile?.nom ?? ""
+  const initials = ((prenom[0] ?? "") + (nom[0] ?? "")).toUpperCase() || "?"
+  const fullName = [prenom, nom].filter(Boolean).join(" ") || "—"
+
+  const certibiocideExp = profile?.certif_biocide_expiration ?? null
+  const rcProExp = profile?.rc_pro_expiration ?? null
+
+  const certibiocideValid = certibiocideExp ? new Date(certibiocideExp) > new Date() : false
+  const rcProValid = rcProExp ? new Date(rcProExp) > new Date() : false
+
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "32px 20px 64px" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 28px" }}>
@@ -23,15 +80,18 @@ export default function TechnicienProfilPage() {
               fontSize: "28px", fontWeight: 700,
               margin: "0 auto 16px",
             }}>
-              TL
+              {initials}
             </div>
-            <p style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>Thomas Lebrun</p>
+            <p style={{ fontSize: "22px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 6px" }}>{fullName}</p>
             <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "20px", background: "#D1FAE5", color: "#065F46", fontSize: "12px", fontWeight: 700, marginBottom: "10px" }}>
               Certifié Noxyera
             </span>
-            <div style={{ fontSize: "14px", color: "#F59E0B", marginBottom: "8px" }}>★★★★★ 4.9</div>
-            <p style={{ fontSize: "13px", color: "#9CA3AF", margin: "0 0 4px" }}>124 interventions</p>
-            <p style={{ fontSize: "12px", color: "#6B7280", margin: 0, fontFamily: "monospace" }}>N° CERT-NXR-2024-001</p>
+            {profile?.email && (
+              <p style={{ fontSize: "13px", color: "#6B7280", margin: "4px 0 0" }}>{profile.email}</p>
+            )}
+            {profile?.telephone && (
+              <p style={{ fontSize: "13px", color: "#9CA3AF", margin: "2px 0 0" }}>{profile.telephone}</p>
+            )}
           </div>
 
           {/* Card gains */}
@@ -39,17 +99,21 @@ export default function TechnicienProfilPage() {
             <p style={{ fontSize: "12px", fontWeight: 600, margin: "0 0 8px", opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Gains ce mois
             </p>
-            <p style={{ fontSize: "36px", fontWeight: 700, margin: "0 0 4px", lineHeight: 1 }}>3 840 €</p>
-            <p style={{ fontSize: "13px", margin: "0 0 16px", opacity: 0.85 }}>14 interventions · +12% vs mois dernier</p>
+            <p style={{ fontSize: "36px", fontWeight: 700, margin: "0 0 4px", lineHeight: 1 }}>
+              {formatEur(data?.gainsMonth ?? 0)}
+            </p>
+            <p style={{ fontSize: "13px", margin: "0 0 16px", opacity: 0.85 }}>
+              {data?.interventionsMonth ?? 0} intervention{(data?.interventionsMonth ?? 0) > 1 ? "s" : ""}
+            </p>
             <div style={{ height: "1px", background: "rgba(255,255,255,0.3)", margin: "0 0 14px" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", opacity: 0.9 }}>
               <div>
                 <p style={{ margin: "0 0 2px", opacity: 0.7 }}>Cumul YTD</p>
-                <p style={{ fontWeight: 700, fontSize: "16px", margin: 0 }}>18 240 €</p>
+                <p style={{ fontWeight: 700, fontSize: "16px", margin: 0 }}>{formatEur(data?.gainsYTD ?? 0)}</p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <p style={{ margin: "0 0 2px", opacity: 0.7 }}>Prochain virement</p>
-                <p style={{ fontWeight: 700, fontSize: "14px", margin: 0 }}>1er juin 2026</p>
+                <p style={{ fontWeight: 700, fontSize: "14px", margin: 0 }}>{data?.nextVirement ?? "—"}</p>
               </div>
             </div>
           </div>
@@ -65,9 +129,21 @@ export default function TechnicienProfilPage() {
             </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {[
-                { label: "Certibiocide", info: "Exp. 12/2026", ok: true },
-                { label: "RC Pro", info: "Exp. 03/2027", ok: true },
-                { label: "Convention Noxyera", info: "Sans limite", ok: true },
+                {
+                  label: "Certibiocide",
+                  info: certibiocideExp ? `Exp. ${formatDateExp(certibiocideExp)}` : "—",
+                  ok: certibiocideValid,
+                },
+                {
+                  label: "RC Pro",
+                  info: rcProExp ? `Exp. ${formatDateExp(rcProExp)}` : "—",
+                  ok: rcProValid,
+                },
+                {
+                  label: "Convention Noxyera",
+                  info: "Sans limite",
+                  ok: true,
+                },
               ].map(({ label, info, ok }) => (
                 <div
                   key={label}
@@ -112,7 +188,7 @@ export default function TechnicienProfilPage() {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#F5F0E8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#F5F0E8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#1B3A2D", fontWeight: 700 }}>
                   @
                 </div>
                 <div>

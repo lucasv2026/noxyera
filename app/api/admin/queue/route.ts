@@ -19,7 +19,7 @@ export async function GET() {
   ] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, secteur, superficie, created_at, statut, email")
+      .select("id, secteur, superficie, created_at, email, nom_etablissement, type")
       .order("created_at", { ascending: false }),
     supabase
       .from("audits")

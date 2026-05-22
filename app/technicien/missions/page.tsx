@@ -63,7 +63,7 @@ async function getData(): Promise<MissionsData> {
       .from("interventions")
       .select("*, sites(id, nom, adresse, ville, secteur, code_postal, client_id), contracts(formule, frequence)")
       .eq("technicien_id", profile.id)
-      .eq("statut", "planifie")
+      .in("statut", ["planifie", "en_cours"])
       .gte("date_prevue", todayStr + "T00:00:00")
       .lte("date_prevue", todayStr + "T23:59:59")
       .order("date_prevue", { ascending: true })
@@ -104,7 +104,7 @@ export default async function MissionsPage() {
   const todayDisplay = todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)
 
   return (
-    <div style={{ maxWidth: "680px", margin: "0 auto", padding: "32px 20px 64px" }}>
+    <div style={{ maxWidth: "896px", margin: "0 auto", padding: "32px 20px 64px" }}>
       <Suspense fallback={null}>
         <RapportSuccessBanner />
       </Suspense>
@@ -187,6 +187,12 @@ export default async function MissionsPage() {
                       <span style={{ padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, background: tc.bg, color: tc.color }}>
                         {tc.label}
                       </span>
+                      {(mission as { statut?: string }).statut === "en_cours" && (
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, background: "#D1FAE5", color: "#065F46" }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", display: "inline-block", animation: "pulse 2s infinite" }} />
+                          EN COURS
+                        </span>
+                      )}
                     </div>
                   </div>
 

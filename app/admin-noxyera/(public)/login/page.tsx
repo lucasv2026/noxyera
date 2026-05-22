@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -13,16 +14,51 @@ export default function AdminLogin() {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Try Supabase auth first
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+      )
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (!authError && data.user) {
+        // Check admin role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+
+        if (profile?.role === 'admin') {
+          router.push('/admin-noxyera')
+          return
+        } else {
+          await supabase.auth.signOut()
+          setError('Accès non autorisé')
+          setLoading(false)
+          return
+        }
+      }
+    } catch {
+      // Supabase unavailable, fall through to cookie auth
+    }
+
+    // Fall back to cookie auth
     const res = await fetch('/api/admin-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     })
+
     if (res.ok) {
       router.push('/admin-noxyera')
     } else {
       setError('Identifiants incorrects')
     }
+
     setLoading(false)
   }
 

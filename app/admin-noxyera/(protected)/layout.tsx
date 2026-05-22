@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck } from 'lucide-react'
+import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck, UserCog } from 'lucide-react'
 
 const NAV = [
   { label: 'Tableau de bord', href: '/admin-noxyera', icon: LayoutDashboard },
@@ -11,16 +11,53 @@ const NAV = [
   { label: 'Planning', href: '/admin-noxyera/planning', icon: Calendar },
   { label: 'Facturation', href: '/admin-noxyera/facturation', icon: TrendingUp },
   { label: 'Candidatures', href: '/admin-noxyera/candidatures', icon: Wrench },
+  { label: 'Admins', href: '/admin-noxyera/admins', icon: UserCog },
   { label: 'Leads', href: '/admin-noxyera/leads', icon: Target },
 ]
 
 export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin_session')
+  let isAdmin = false
+  let adminName = 'Administrateur'
+  let adminEmail = process.env.ADMIN_EMAIL ?? 'admin@noxyera.com'
 
-  if (!session || session.value !== 'authenticated') {
-    redirect('/admin-noxyera/login')
+  // Check Supabase auth first
+  try {
+    const { createClient } = await import("@/lib/supabase/server")
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, prenom, nom, email")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      if (profile?.role === 'admin') {
+        isAdmin = true
+        adminEmail = profile.email ?? user.email ?? adminEmail
+        adminName = [profile.prenom, profile.nom].filter(Boolean).join(' ') || 'Administrateur'
+      }
+    }
+  } catch {
+    // Supabase unavailable, fall through to cookie check
   }
+
+  // Emergency fallback: cookie
+  if (!isAdmin) {
+    const cookieStore = await cookies()
+    const session = cookieStore.get('admin_session')
+    if (session?.value === 'authenticated') isAdmin = true
+  }
+
+  if (!isAdmin) redirect('/admin-noxyera/login')
+
+  const initials = adminName
+    .split(' ')
+    .map((w: string) => w[0] ?? '')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'A'
 
   return (
     <div className="min-h-screen" style={{ background: '#0D1F17' }}>
@@ -68,12 +105,12 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
         <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center gap-2 px-3 py-2 mb-2">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: '#F26522', color: 'white' }}>
-              A
+              {initials}
             </div>
             <div>
-              <p className="text-xs font-medium text-white">Administrateur</p>
+              <p className="text-xs font-medium text-white">{adminName}</p>
               <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                {process.env.ADMIN_EMAIL ?? 'admin@noxyera.com'}
+                {adminEmail}
               </p>
             </div>
           </div>

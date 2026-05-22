@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     // 4. Email de bienvenue branded (sans mot de passe)
     try {
       const { sendTechnicienBienvenueEmail } = await import("@/lib/emails");
-      await sendTechnicienBienvenueEmail(email, { prenom });
+      await sendTechnicienBienvenueEmail(email, { prenom: String(prenom) });
     } catch (emailErr) {
       console.error("EMAIL ERROR valider-technicien:", emailErr);
     }
