@@ -54,15 +54,13 @@ export async function POST(request: Request) {
 
   // Emails — non-bloquants
   try {
-    const { sendAuditClientEmail, sendAuditAdminNotif } = await import("@/lib/emails");
+    // C2 : accusé de réception — aucun technicien assigné à ce stade, pas de date
+    // C3 se déclenche UNIQUEMENT depuis accept/route.ts après acceptation technicien
+    const { sendAuditReceptionEmail, sendAuditAdminNotif } = await import("@/lib/emails");
     await Promise.allSettled([
-      sendAuditClientEmail(String(email), {
-        prenom:            String(prenom),
-        nomEtablissement:  String(nom_etablissement),
-        adresse:           String(adresse),
-        secteur:           String(secteur),
-        creneaux:          Array.isArray(body.creneaux) ? (body.creneaux as string[]) : [],
-        jours:             Array.isArray(body.jours) ? (body.jours as string[]) : [],
+      sendAuditReceptionEmail(String(email), {
+        prenom:           String(prenom),
+        nomEtablissement: String(nom_etablissement),
       }),
       sendAuditAdminNotif({
         nomEtablissement:  String(nom_etablissement),

@@ -10,12 +10,14 @@ import { CandidatureConfirmEmail } from '../emails/CandidatureConfirmEmail'
 import { AuditClientEmail } from '../emails/AuditClientEmail'
 import { AuditAssignEmail, AuditAdminNotifEmail } from '../emails/AuditAssignEmail'
 import { AuditPlanifieClientEmail } from '../emails/AuditPlanifieClientEmail'
+import { AuditReceptionEmail } from '../emails/AuditReceptionEmail'
+import { MissionOffreEmail } from '../emails/MissionOffreEmail'
 
 console.log('RESEND KEY:', process.env.RESEND_API_KEY ? 'présente' : 'MANQUANTE')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'Noxyera <onboarding@resend.dev>'
-const ADMIN_EMAIL = 'lucas@agencenikita.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'lucas@agencenikita.com'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://noxyera.com'
 
 export async function sendWelcomeEmail(to: string, props: { prenom: string; nomEtablissement: string; formule: string; prixAnnuel: number }) {
@@ -457,5 +459,54 @@ export async function sendMissionExpireedAdminEmail(props: {
     return result
   } catch (err) {
     console.error('EMAIL ERROR mission expiree admin:', err)
+  }
+}
+
+// ── Email C2 — Réception demande d'audit (AUCUN technicien assigné à ce stade) ──
+// Déclenché uniquement dans audit/route.ts, jamais depuis accept/route.ts
+export async function sendAuditReceptionEmail(to: string, props: { prenom: string; nomEtablissement: string }) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] audit reception to', to); return }
+  try {
+    const html = await render(React.createElement(AuditReceptionEmail, props))
+    const result = await resend.emails.send({
+      from: FROM, to,
+      subject: 'Votre demande a bien été reçue — Noxyera',
+      html,
+    })
+    console.log('EMAIL SENT audit reception:', JSON.stringify(result))
+    return result
+  } catch (err) {
+    console.error('EMAIL ERROR audit reception:', err)
+  }
+}
+
+// ── Email T1 (template) — Offre de mission au technicien ─────────────────────
+// Version react-email avec bloc expiration amber et mention légale obligatoire
+interface MissionOffreProps {
+  prenomTech: string
+  nomSite: string
+  adresse: string
+  secteur: string
+  superficie: number | null
+  datePrevue: string
+  type: 'preventif' | 'curatif' | 'audit'
+  notesClient: string | null
+  expiresAt: string
+  appUrl: string
+}
+
+export async function sendMissionOffreEmail(to: string, props: MissionOffreProps) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] mission offre to', to); return }
+  try {
+    const html = await render(React.createElement(MissionOffreEmail, props))
+    const result = await resend.emails.send({
+      from: FROM, to,
+      subject: 'Noxyera — Nouvelle offre de mission',
+      html,
+    })
+    console.log('EMAIL SENT mission offre (template):', JSON.stringify(result))
+    return result
+  } catch (err) {
+    console.error('EMAIL ERROR mission offre (template):', err)
   }
 }
