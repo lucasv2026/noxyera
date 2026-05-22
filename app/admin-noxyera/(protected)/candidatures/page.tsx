@@ -96,12 +96,12 @@ export default function AdminCandidaturesPage() {
         const res = await fetch("/api/admin/candidatures");
         if (res.ok) {
           const data = await res.json();
-          setCandidatures(data.length > 0 ? data : DEMO_CANDIDATURES);
+          setCandidatures(data);
         } else {
-          setCandidatures(DEMO_CANDIDATURES);
+          setCandidatures([]);
         }
       } catch {
-        setCandidatures(DEMO_CANDIDATURES);
+        setCandidatures([]);
       } finally {
         setLoading(false);
       }
@@ -161,7 +161,7 @@ export default function AdminCandidaturesPage() {
       {toast && (
         <div style={{
           position: "fixed", top: 20, right: 20, zIndex: 9999,
-          background: toast.type === "success" ? "#10B981" : "#EF4444",
+          background: toast.type === "success" ? "#1B3A2D" : "#EF4444",
           color: "white", padding: "12px 20px", borderRadius: 12,
           fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
           display: "flex", alignItems: "center", gap: 8,
@@ -205,7 +205,7 @@ export default function AdminCandidaturesPage() {
 
       {/* Filter tabs */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {(["tous", "nouveau", "contacté", "entretien", "accepté", "refusé"] as const).map(key => (
+        {(["tous", "nouveau", "contacté", "entretien", "accepté"] as const).map(key => (
           <button
             key={key}
             onClick={() => setFilter(key)}
@@ -355,15 +355,15 @@ export default function AdminCandidaturesPage() {
                       onClick={() => updateStatut(c.id, "refusé")}
                       disabled={c.statut === "refusé" || actionLoading === c.id + "refusé"}
                       style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-                        background: "rgba(239,68,68,0.1)", color: "#EF4444",
-                        border: "1px solid rgba(239,68,68,0.2)",
+                        display: "flex", alignItems: "center", gap: 4,
+                        padding: "4px 10px", borderRadius: 8, fontSize: 11, fontWeight: 500,
+                        background: "transparent", color: "rgba(239,68,68,0.55)",
+                        border: "1px solid rgba(239,68,68,0.15)",
                         cursor: c.statut === "refusé" ? "default" : "pointer",
-                        opacity: c.statut === "refusé" ? 0.5 : 1,
+                        opacity: c.statut === "refusé" ? 0.4 : 1,
                       }}
                     >
-                      <X size={12} /> Refuser
+                      <X size={10} /> Refuser
                     </button>
 
                     {/* Statut entretien */}

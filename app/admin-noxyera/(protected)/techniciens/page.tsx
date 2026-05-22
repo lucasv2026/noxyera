@@ -1,115 +1,198 @@
-import { ShieldCheck, Star, MapPin, Calendar, CheckCircle2, XCircle } from "lucide-react";
-import { ADMIN_TECHNICIENS } from "@/lib/demo-data";
+import Link from "next/link";
+import { ShieldCheck, MapPin, Mail, Phone, ArrowRight } from "lucide-react";
 
-export default function AdminTechniciensPage() {
-  const actifsAujourdhui = ADMIN_TECHNICIENS.filter(t => t.missionsAujourdhui > 0).length;
+interface TechnicienRow {
+  id: string;
+  prenom: string | null;
+  nom: string | null;
+  email: string | null;
+  telephone: string | null;
+  ville: string | null;
+  disponibilite: string | null;
+  certifications: string[] | null;
+  created_at: string;
+}
+
+interface InterventionRow {
+  technicien_id: string;
+  statut: string;
+}
+
+const DISPO_MAP: Record<string, string> = {
+  "temps-plein":  "Temps plein",
+  "temps-partiel":"Temps partiel",
+  "week-ends":    "Week-ends",
+  "flexible":     "Flexible",
+};
+
+export default async function AdminTechniciensPage() {
+  let techniciens: TechnicienRow[] = [];
+  let interventionStats: InterventionRow[] = [];
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    const { data: techData } = await supabase
+      .from('profiles')
+      .select('id, prenom, nom, email, telephone, ville, disponibilite, certifications, created_at')
+      .eq('role', 'technicien')
+      .order('created_at', { ascending: false });
+
+    techniciens = techData ?? [];
+
+    if (techniciens.length > 0) {
+      const { data: intData } = await supabase
+        .from('interventions')
+        .select('technicien_id, statut')
+        .in('technicien_id', techniciens.map(t => t.id));
+      interventionStats = intData ?? [];
+    }
+  } catch {
+    // Supabase unavailable — show empty list
+  }
+
+  function statsFor(id: string) {
+    const rows = interventionStats.filter(r => r.technicien_id === id);
+    const realise = rows.filter(r => r.statut === 'realise').length;
+    const enCours = rows.filter(r => ['en_cours', 'planifie'].includes(r.statut)).length;
+    return { realise, enCours };
+  }
 
   return (
-    <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
+    <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white">Techniciens</h1>
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-            {ADMIN_TECHNICIENS.length} techniciens · {actifsAujourdhui} en mission aujourd&apos;hui
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "white", margin: "0 0 4px" }}>Techniciens</h1>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            {techniciens.length} technicien{techniciens.length !== 1 ? "s" : ""} dans la base
           </p>
         </div>
-        <button
-          className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: "#F26522" }}
-        >
-          + Ajouter technicien
-        </button>
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Total certifiés", value: ADMIN_TECHNICIENS.length, color: "#10B981" },
-          { label: "En mission / aujourd&apos;hui", value: actifsAujourdhui, color: "#60A5FA" },
-          { label: "Note moyenne", value: (ADMIN_TECHNICIENS.reduce((acc, t) => acc + t.note, 0) / ADMIN_TECHNICIENS.length).toFixed(1) + "/5", color: "#F59E0B" },
+          { label: "Total", value: techniciens.length, color: "#10B981" },
+          {
+            label: "Interventions réalisées",
+            value: interventionStats.filter(r => r.statut === 'realise').length,
+            color: "#60A5FA",
+          },
+          {
+            label: "En cours",
+            value: interventionStats.filter(r => ['en_cours', 'planifie'].includes(r.statut)).length,
+            color: "#F59E0B",
+          },
         ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-2xl p-4"
-            style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}
-              dangerouslySetInnerHTML={{ __html: label }} />
-            <p className="text-2xl font-bold" style={{ color }}>{value}</p>
+          <div key={label} style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "16px 20px" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px", fontFamily: "monospace" }}>
+              {label}
+            </p>
+            <p style={{ fontSize: 24, fontWeight: 700, color, margin: 0, fontFamily: "monospace" }}>{value}</p>
           </div>
         ))}
       </div>
 
-      {/* Techniciens list */}
-      <div className="space-y-3">
-          {ADMIN_TECHNICIENS.map((tech) => (
-            <div
-              key={tech.id}
-              className="rounded-2xl p-5"
-              style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <div className="flex items-start gap-4">
-                {/* Avatar */}
+      {/* List */}
+      <div style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
+        {techniciens.length === 0 ? (
+          <div style={{ padding: 48, textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
+            Aucun technicien enregistré.
+          </div>
+        ) : (
+          <div>
+            {techniciens.map((tech, i) => {
+              const { realise, enCours } = statsFor(tech.id);
+              const initials = [(tech.prenom ?? "")[0], (tech.nom ?? "")[0]].filter(Boolean).join("").toUpperCase();
+              return (
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
-                  style={{ background: tech.statut === "actif" ? "#1B4332" : "#1A1A1A", color: tech.statut === "actif" ? "#10B981" : "#6B7280" }}
+                  key={tech.id}
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: i < techniciens.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    display: "flex", alignItems: "flex-start", gap: 14,
+                  }}
                 >
-                  {tech.nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                </div>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 12,
+                    background: "rgba(242,101,34,0.15)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, fontWeight: 700, color: "#F26522", flexShrink: 0,
+                  }}>
+                    {initials || "?"}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-sm text-white">{tech.nom}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{tech.email}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {tech.statut === "actif" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ background: "rgba(16,185,129,0.15)", color: "#10B981" }}>
-                          <CheckCircle2 size={10} /> Actif
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>
+                        {tech.prenom} {tech.nom}
+                      </span>
+                      {tech.disponibilite && (
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
+                          {DISPO_MAP[tech.disponibilite] ?? tech.disponibilite}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ background: "rgba(107,114,128,0.15)", color: "#6B7280" }}>
-                          <XCircle size={10} /> Inactif
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 14, marginTop: 5, flexWrap: "wrap" }}>
+                      {tech.email && (
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Mail size={11} /> {tech.email}
+                        </span>
+                      )}
+                      {tech.telephone && (
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", display: "flex", alignItems: "center", gap: 4 }}>
+                          <Phone size={11} /> {tech.telephone}
+                        </span>
+                      )}
+                      {tech.ville && (
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", display: "flex", alignItems: "center", gap: 4 }}>
+                          <MapPin size={11} /> {tech.ville}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      {(tech.certifications ?? []).map(cert => (
+                        <span key={cert} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "rgba(96,165,250,0.12)", color: "#60A5FA", display: "flex", alignItems: "center", gap: 3 }}>
+                          <ShieldCheck size={9} /> {cert}
+                        </span>
+                      ))}
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "rgba(16,185,129,0.1)", color: "#10B981" }}>
+                        {realise} réalisée{realise !== 1 ? "s" : ""}
+                      </span>
+                      {enCours > 0 && (
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: "#F59E0B" }}>
+                          {enCours} en cours
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                    <div>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Certification</p>
-                      <p className="text-xs font-medium mt-0.5 text-white flex items-center gap-1">
-                        <ShieldCheck size={11} style={{ color: "#10B981" }} />
-                        {tech.certif}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Région</p>
-                      <p className="text-xs font-medium mt-0.5 text-white flex items-center gap-1">
-                        <MapPin size={11} style={{ color: "#60A5FA" }} />
-                        {tech.region}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Aujourd&apos;hui</p>
-                      <p className="text-xs font-medium mt-0.5 text-white flex items-center gap-1">
-                        <Calendar size={11} style={{ color: "#A78BFA" }} />
-                        {tech.missionsAujourdhui} mission{tech.missionsAujourdhui > 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Note</p>
-                      <p className="text-xs font-medium mt-0.5 text-white flex items-center gap-1">
-                        <Star size={11} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
-                        {tech.note}/5 ({tech.missionsTotal} missions)
-                      </p>
-                    </div>
-                  </div>
+                  <Link
+                    href={`/admin-noxyera/techniciens/${tech.id}`}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: "rgba(242,101,34,0.12)", color: "#F26522",
+                      border: "1px solid rgba(242,101,34,0.2)", textDecoration: "none",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Voir profil <ArrowRight size={12} />
+                  </Link>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ export function RapportSuccessBanner() {
       left: "50%",
       transform: "translateX(-50%)",
       zIndex: 1000,
-      background: "#065F46",
+      background: "#1B3A2D",
       color: "white",
       padding: "14px 24px",
       borderRadius: "12px",

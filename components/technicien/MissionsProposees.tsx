@@ -152,7 +152,7 @@ export function MissionsProposees({ technicienId }: { technicienId: string }) {
       {toast && (
         <div style={{
           position: "fixed", top: 20, right: 20, zIndex: 9999,
-          background: "#10B981", color: "white", padding: "12px 20px",
+          background: "#1B3A2D", color: "white", padding: "12px 20px",
           borderRadius: 12, fontSize: 13, fontWeight: 600,
           boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
         }}>

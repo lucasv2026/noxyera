@@ -200,10 +200,12 @@ function AuditFormContent() {
     setForm(prev => ({ ...prev, [k]: v }));
   }
 
-  // Superficie reset when secteur changes (only if not pre-filled from URL)
+  // Superficie reset when secteur changes (skip first mount to preserve URL param)
+  const isFirstMount = useRef(true)
   useEffect(() => {
-    const cfg = SUPERFICIE_CFG[form.secteur];
-    if (cfg) set("superficie", cfg.def);
+    if (isFirstMount.current) { isFirstMount.current = false; return }
+    const cfg = SUPERFICIE_CFG[form.secteur]
+    if (cfg) set("superficie", cfg.def)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.secteur]);
 
@@ -219,7 +221,8 @@ function AuditFormContent() {
 
   function canSubmit() {
     return form.prenom.trim() && form.nom.trim() &&
-      form.email.includes("@") && form.telephone.trim().length >= 10;
+      form.email.includes("@") && form.telephone.trim().length >= 10 &&
+      form.jours.length >= 1
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -478,8 +481,25 @@ function AuditFormContent() {
               </div>
 
               <div style={fieldStyle}>
-                <label style={labelStyle}>Jours préférés</label>
-                <PillSelect options={JOURS} selected={form.jours} onChange={v => set("jours", v)} />
+                <label style={labelStyle}>Proposez 2 à 3 dates disponibles *</label>
+                <p style={{ fontSize: 12, color: "#9CA3AF", margin: "0 0 12px" }}>Sélectionnez des dates dans les 2 prochaines semaines. Nous confirmerons sous 24h.</p>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, color: "#6B7280", minWidth: 60 }}>Date {i + 1}{i === 0 ? " *" : ""}</span>
+                    <input
+                      type="date"
+                      min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                      max={new Date(Date.now() + 21 * 86400000).toISOString().split("T")[0]}
+                      value={form.jours[i] ?? ""}
+                      onChange={e => {
+                        const newJours = [...form.jours]
+                        newJours[i] = e.target.value
+                        set("jours", newJours.filter(Boolean))
+                      }}
+                      style={{ ...inputStyle, width: "auto", flex: 1 }}
+                    />
+                  </div>
+                ))}
               </div>
 
               {error && (

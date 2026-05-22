@@ -248,13 +248,13 @@ export default function AdminAuditsPage() {
         const res = await fetch("/api/admin/audits");
         if (res.ok) {
           const data = await res.json();
-          setAudits(data.audits?.length > 0 ? data.audits : DEMO_AUDITS);
+          setAudits(data.audits ?? []);
           setTechniciens(data.techniciens ?? []);
         } else {
-          setAudits(DEMO_AUDITS);
+          setAudits([]);
         }
       } catch {
-        setAudits(DEMO_AUDITS);
+        setAudits([]);
       } finally {
         setLoading(false);
       }
@@ -333,7 +333,7 @@ export default function AdminAuditsPage() {
       {toast && (
         <div style={{
           position: "fixed", top: 20, right: 20, zIndex: 9999,
-          background: "#10B981", color: "white", padding: "12px 20px", borderRadius: 12,
+          background: "#1B3A2D", color: "white", padding: "12px 20px", borderRadius: 12,
           fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -374,7 +374,8 @@ export default function AdminAuditsPage() {
         </div>
         {(["tous", ...STATUT_OPTIONS] as const).map(key => (
           <button key={key} onClick={() => setFilter(key)}
-            style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: filter === key ? "#F26522" : "rgba(255,255,255,0.07)", color: filter === key ? "white" : "rgba(255,255,255,0.55)" }}>
+            style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: filter === key ? "#F26522" : "rgba(255,255,255,0.07)", color: filter === key ? "white" : "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", gap: 5 }}>
+            {key === "audit planifié" && <span style={{ fontSize: 10, color: "#60A5FA" }}>→</span>}
             {key === "tous" ? "Tous" : (STATUT_CFG[key]?.label ?? key)} ({counts[key as string] ?? 0})
           </button>
         ))}
@@ -466,8 +467,9 @@ export default function AdminAuditsPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Date prévue</label>
                       <input
-                        type="datetime-local"
-                        value={edit.date ?? (audit.date_audit_prevue ? audit.date_audit_prevue.slice(0, 16) : "")}
+                        type="date"
+                        min={new Date().toISOString().split('T')[0]}
+                        value={edit.date ?? (audit.date_audit_prevue ? audit.date_audit_prevue.slice(0, 10) : "")}
                         onChange={e => setEdit(audit.id, "date", e.target.value)}
                         style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: "white", fontSize: 12, outline: "none" }}
                       />
