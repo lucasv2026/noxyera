@@ -2,6 +2,14 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Récupère la clé anonyme Supabase — compatible nouvelles (PUBLISHABLE) et anciennes (ANON) configs
+function getSupabaseAnonKey(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -43,7 +51,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Supabase non configuré → laisser passer (dev sans .env)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const supabaseAnonKey = getSupabaseAnonKey();
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseAnonKey) {
     return NextResponse.next();
   }
 
@@ -52,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {

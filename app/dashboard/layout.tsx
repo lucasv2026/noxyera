@@ -19,7 +19,8 @@ async function getProfile(): Promise<Profile | null> {
       .eq("user_id", user.id)
       .maybeSingle()
 
-    if (!profile || profile.role !== "client") return null
+    // Accepter tout utilisateur authentifié (client, admin, etc.)
+    if (!profile) return null
     return profile as Profile
   } catch {
     return null
