@@ -2,7 +2,22 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
-  const { candidatureId, email, prenom, nom } = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Format invalide" }, { status: 400 });
+  }
+
+  const { candidatureId, email, prenom, nom } = body;
+
+  // Validation des champs obligatoires
+  if (!email || typeof email !== "string" || !email.includes("@")) {
+    return NextResponse.json({ error: "email valide requis" }, { status: 400 });
+  }
+  if (!prenom || !nom) {
+    return NextResponse.json({ error: "prenom et nom requis" }, { status: 400 });
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
