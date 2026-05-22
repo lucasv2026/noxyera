@@ -34,6 +34,8 @@ export async function middleware(request: NextRequest) {
     "/suivi-sanitaire",
     "/audit",
     "/rapports-publics",
+    "/technicien/onboarding",   // post-invite : session active via lien magique
+    "/dashboard/onboarding",    // post-invite : session active via lien magique
   ];
   if (
     pathname === "/" ||

@@ -217,3 +217,44 @@ export async function sendCandidatureConfirmEmail(
     console.error('EMAIL ERROR candidature confirm:', err)
   }
 }
+
+// ── Email de bienvenue technicien (sans mot de passe) ────────────────────────
+// Envoyé après inviteUserByEmail — le lien d'activation arrive séparément via Supabase
+export async function sendTechnicienBienvenueEmail(to: string, props: { prenom: string }) {
+  if (!process.env.RESEND_API_KEY) { console.log('[Email mock] technicien bienvenue to', to); return }
+  try {
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="display:inline-block;background:#1B3A2D;color:#fff;padding:8px 20px;border-radius:8px;font-weight:700;font-size:18px;letter-spacing:1px">NOXYERA</div>
+        </div>
+        <h2 style="color:#1B3A2D;font-size:22px;margin:0 0 12px">Bienvenue ${props.prenom} !</h2>
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px">
+          Votre candidature technicien a été acceptée. Votre profil Noxyera est en cours de création.
+        </p>
+        <div style="background:#F5F0E8;border-left:4px solid #F26522;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0">
+          <p style="margin:0;color:#374151;font-size:14px;font-weight:600">
+            📨 Vous allez recevoir un lien d'activation sous quelques minutes.
+          </p>
+          <p style="margin:8px 0 0;color:#6B7280;font-size:13px">
+            Ce lien vous permettra de définir votre propre mot de passe et d'accéder à vos missions.
+          </p>
+        </div>
+        <p style="color:#6B7280;font-size:13px;margin-top:24px">
+          À très bientôt,<br>
+          <strong style="color:#1B3A2D">L'équipe Noxyera</strong>
+        </p>
+      </div>
+    `
+    const result = await resend.emails.send({
+      from: FROM,
+      to,
+      subject: 'Bienvenue chez Noxyera — votre accès technicien arrive !',
+      html,
+    })
+    console.log('EMAIL SENT technicien bienvenue:', JSON.stringify(result))
+    return result
+  } catch (err) {
+    console.error('EMAIL ERROR technicien bienvenue:', err)
+  }
+}

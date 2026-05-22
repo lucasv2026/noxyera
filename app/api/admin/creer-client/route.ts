@@ -17,64 +17,71 @@ export async function POST(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const motDePasse = "Nox" + Math.floor(1000 + Math.random() * 9000).toString();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://noxyera.com";
 
   try {
-    // 1. Crée user Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password: motDePasse,
-      email_confirm: true,
-      user_metadata: { role: "client", nom_etablissement: nomEtablissement },
+    // 1. Invite via Supabase — envoie le lien magique, crée le compte
+    const { data, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+      data: { role: "client", nom_etablissement: nomEtablissement },
+      redirectTo: `${siteUrl}/dashboard/onboarding`,
     });
 
-    if (authError) {
-      console.error("AUTH CREATE CLIENT ERROR:", JSON.stringify(authError));
+    if (inviteError) {
+      console.error("INVITE CLIENT ERROR:", JSON.stringify(inviteError));
     }
 
-    const userId = authData?.user?.id;
+    const authUserId = data?.user?.id;
 
-    if (userId) {
-      // 2. INSERT profiles
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: userId, email, role: "client",
-        nom: nomEtablissement ?? "",
-        prenom: "",
-      });
-      if (profileError) console.error("PROFILE CLIENT ERROR:", JSON.stringify(profileError));
+    if (authUserId) {
+      // 2. Attendre que le trigger handle_new_user crée la ligne profiles
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // 3. INSERT sites
-      const { data: siteData, error: siteError } = await supabase.from("sites").insert({
-        client_id: userId,
-        nom: nomEtablissement,
-        adresse: adresse ?? "",
-        secteur: secteur ?? "restaurant",
-        superficie: superficie ?? 100,
-        statut: "conforme",
-        haccp_score: 80,
-      }).select().single();
-      if (siteError) console.error("SITE INSERT ERROR:", JSON.stringify(siteError));
+      // 3. Récupérer le profiles.id (UUID interne, ≠ auth user id)
+      const { data: profileRow, error: profileFetchError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", authUserId)
+        .single();
 
-      // 4. INSERT contracts
-      if (siteData?.id) {
-        const { error: contractError } = await supabase.from("contracts").insert({
-          client_id: userId,
-          site_id: siteData.id,
-          formule: formule ?? "essentiel",
-          prix_annuel: prixEstime ?? 0,
-          statut: "actif",
-          date_debut: new Date().toISOString().split("T")[0],
-        });
-        if (contractError) console.error("CONTRACT INSERT ERROR:", JSON.stringify(contractError));
+      if (profileFetchError) console.error("PROFILE FETCH ERROR:", JSON.stringify(profileFetchError));
+
+      const profileId = profileRow?.id;
+
+      if (profileId) {
+        // 4. INSERT site avec profiles.id (FK correcte)
+        const { data: siteData, error: siteError } = await supabase.from("sites").insert({
+          client_id: profileId,
+          nom: nomEtablissement,
+          adresse: adresse ?? "",
+          secteur: secteur ?? "restaurant",
+          superficie: superficie ?? 100,
+          statut: "conforme",
+          haccp_score: 80,
+        }).select().single();
+
+        if (siteError) console.error("SITE INSERT ERROR:", JSON.stringify(siteError));
+
+        // 5. INSERT contract avec profiles.id (FK correcte)
+        if (siteData?.id) {
+          const { error: contractError } = await supabase.from("contracts").insert({
+            client_id: profileId,
+            site_id: siteData.id,
+            formule: formule ?? "essentiel",
+            prix_annuel: prixEstime ?? 0,
+            statut: "actif",
+            date_debut: new Date().toISOString().split("T")[0],
+          });
+          if (contractError) console.error("CONTRACT INSERT ERROR:", JSON.stringify(contractError));
+        }
       }
     }
 
-    // 5. UPDATE lead statut → signé
+    // 6. UPDATE lead statut → signé
     if (leadId) {
       await supabase.from("leads").update({ statut: "signé" }).eq("id", leadId);
     }
 
-    // 6. Envoie email bienvenue
+    // 7. Email de bienvenue (sans mot de passe — le lien arrive séparément via Supabase)
     try {
       const { sendWelcomeEmail } = await import("@/lib/emails");
       await sendWelcomeEmail(email, {
@@ -87,7 +94,7 @@ export async function POST(request: Request) {
       console.error("EMAIL creer-client ERROR:", emailErr);
     }
 
-    return NextResponse.json({ success: true, motDePasse });
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("CREER CLIENT ERROR:", err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });

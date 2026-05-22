@@ -16,72 +16,46 @@ export async function POST(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // 1. Génère mot de passe temporaire
-  const motDePasse = "Nox" + Math.floor(1000 + Math.random() * 9000).toString();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://noxyera.com";
 
   try {
-    // 2. Crée user Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password: motDePasse,
-      email_confirm: true,
-      user_metadata: { prenom, nom, role: "technicien" },
+    // 1. Invite via Supabase — envoie le lien magique, crée le compte
+    const { data, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+      data: { prenom, nom, role: "technicien" },
+      redirectTo: `${siteUrl}/technicien/onboarding`,
     });
 
-    if (authError) {
-      console.error("AUTH CREATE ERROR:", JSON.stringify(authError));
+    if (inviteError) {
+      console.error("INVITE TECHNICIEN ERROR:", JSON.stringify(inviteError));
       // Continuer quand même pour mettre à jour la candidature
     }
 
-    const userId = authData?.user?.id;
-
-    // 3. INSERT dans profiles
-    if (userId) {
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: userId,
-        email,
-        prenom,
-        nom,
-        role: "technicien",
-      });
-      if (profileError) console.error("PROFILE INSERT ERROR:", JSON.stringify(profileError));
+    // 2. Mettre à jour le profil créé par le trigger (attendre que le trigger s'exécute)
+    if (data?.user?.id) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ prenom, nom })
+        .eq("user_id", data.user.id);
+      if (profileError) console.error("PROFILE UPDATE ERROR:", JSON.stringify(profileError));
     }
 
-    // 4. UPDATE candidature statut → accepté
+    // 3. UPDATE candidature statut → accepté
     const { error: updateError } = await supabase
       .from("candidatures_techniciens")
       .update({ statut: "accepté" })
       .eq("id", candidatureId);
     if (updateError) console.error("CANDIDATURE UPDATE ERROR:", JSON.stringify(updateError));
 
-    // 5. Envoi email avec identifiants
+    // 4. Email de bienvenue branded (sans mot de passe)
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://noxyera.com";
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: "Noxyera <onboarding@resend.dev>",
-        to: email,
-        subject: "Bienvenue chez Noxyera — vos accès technicien",
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <h2 style="color:#1B3A2D">Bienvenue ${prenom} !</h2>
-            <p>Votre candidature a été acceptée. Voici vos accès :</p>
-            <div style="background:#F5F0E8;padding:16px;border-radius:8px;margin:16px 0">
-              <p style="margin:0"><strong>Email :</strong> ${email}</p>
-              <p style="margin:8px 0 0"><strong>Mot de passe temporaire :</strong> ${motDePasse}</p>
-            </div>
-            <p>Connectez-vous sur <a href="${siteUrl}/technicien/login">${siteUrl}/technicien/login</a></p>
-            <p style="color:#6B7280;font-size:12px">Changez votre mot de passe à la première connexion.</p>
-          </div>
-        `,
-      });
-      console.log("EMAIL valider-technicien envoyé à", email);
+      const { sendTechnicienBienvenueEmail } = await import("@/lib/emails");
+      await sendTechnicienBienvenueEmail(email, { prenom });
     } catch (emailErr) {
       console.error("EMAIL ERROR valider-technicien:", emailErr);
     }
 
-    return NextResponse.json({ success: true, motDePasse });
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("VALIDER TECHNICIEN ERROR:", err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
