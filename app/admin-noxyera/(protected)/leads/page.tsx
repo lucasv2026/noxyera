@@ -166,6 +166,11 @@ function CreerClientModal({ lead, onClose, onSuccess }: {
               </div>
             )}
 
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <Mail size={12} style={{ color: "#60A5FA", flexShrink: 0 }} />
+              Un email d&apos;invitation sera envoyé à cette adresse.
+            </p>
+
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={onClose}
@@ -195,6 +200,12 @@ export default function AdminLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("tous");
   const [creerClientLead, setCreerClientLead] = useState<Lead | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     async function load() {
@@ -242,6 +253,18 @@ export default function AdminLeadsPage() {
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 9999,
+          background: "#10B981", color: "white", padding: "12px 20px", borderRadius: 12,
+          fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <CheckCircle size={15} /> {toast}
+        </div>
+      )}
+
       {creerClientLead && (
         <CreerClientModal
           lead={creerClientLead}
@@ -249,6 +272,7 @@ export default function AdminLeadsPage() {
           onSuccess={() => {
             updateStatut(creerClientLead.id, "signé");
             setCreerClientLead(null);
+            showToast("Compte client créé, invitation envoyée");
           }}
         />
       )}

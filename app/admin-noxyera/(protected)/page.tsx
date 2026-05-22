@@ -1,7 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
-import Link from 'next/link'
-import { Users, SearchCheck, Target, ClipboardList } from 'lucide-react'
+"use client"
 
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { Users, SearchCheck, Target, ClipboardList, AlertTriangle, Clock, RefreshCw } from "lucide-react"
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface LeadRow     { id: string; secteur: string | null; superficie: number | null; created_at: string; statut: string | null; email: string }
+interface AuditRow    { id: string; nom_etablissement: string; email: string; statut: string | null; created_at: string; adresse: string | null }
+interface CandRow     { id: string; prenom: string; nom: string; email: string; ville: string; experience: string; statut: string | null; created_at: string }
+
+interface AlertExpired  { id: string; date_prevue: string; sites: { nom: string } | null }
+interface AlertRefused  { id: string; date_prevue: string; refused_at: string; sites: { nom: string } | null }
+interface AlertLead     { id: string; email: string; nom_etablissement: string | null; secteur: string; created_at: string }
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
@@ -12,101 +24,114 @@ function timeAgo(dateStr: string): string {
   return `il y a ${days}j`
 }
 
+function hoursAgo(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 3600000)
+}
+
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      className={`rounded-2xl ${className}`}
-      style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}
-    >
+    <div className={`rounded-2xl ${className}`} style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}>
       {children}
     </div>
   )
 }
 
-export default async function AdminPage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+function typeBadgeStyle(type: string) {
+  if (type === "Lead")        return { background: "rgba(16,185,129,0.15)",  color: "#10B981" }
+  if (type === "Audit")       return { background: "rgba(245,158,11,0.15)",  color: "#F59E0B" }
+  return { background: "rgba(167,139,250,0.15)", color: "#A78BFA" }
+}
 
-  const [
-    { data: leadsData },
-    { data: auditsData },
-    { data: candidaturesData },
-    { data: clientsData },
-  ] = await Promise.all([
-    supabase.from('leads').select('id, secteur, superficie, created_at, statut').order('created_at', { ascending: false }),
-    supabase.from('audits').select('id, nom_etablissement, email, statut, created_at, adresse').order('created_at', { ascending: false }),
-    supabase.from('candidatures_techniciens').select('id, prenom, nom, email, ville, experience, statut, created_at').order('created_at', { ascending: false }),
-    supabase.from('profiles').select('id, full_name, email').eq('role', 'client'),
-  ])
+function queueTypeBadgeStyle(type: string) {
+  if (type === "Audit")       return { background: "rgba(220,38,38,0.15)",   color: "#DC2626" }
+  if (type === "Lead")        return { background: "rgba(245,158,11,0.15)",  color: "#F59E0B" }
+  return { background: "rgba(167,139,250,0.15)", color: "#A78BFA" }
+}
 
-  const leads = leadsData ?? []
-  const audits = auditsData ?? []
-  const candidatures = candidaturesData ?? []
-  const clients = clientsData ?? []
+// ── Main Page ──────────────────────────────────────────────────────────────────
+export default function AdminPage() {
+  const [leads, setLeads]           = useState<LeadRow[]>([])
+  const [audits, setAudits]         = useState<AuditRow[]>([])
+  const [candidatures, setCand]     = useState<CandRow[]>([])
+  const [clientsCount, setClients]  = useState(0)
+  const [loading, setLoading]       = useState(true)
 
-  // KPIs
-  const auditsEnAttente = audits.filter(a => a.statut === 'nouveau' || a.statut === 'en_attente').length
-  const leadsNouveaux = leads.filter(l => !l.statut || l.statut === 'nouveau').length
-  const candidaturesNouvelles = candidatures.filter(c => !c.statut || c.statut === 'nouveau').length
-  const clientsActifs = clients.length
+  const [expired, setExpired]       = useState<AlertExpired[]>([])
+  const [refused, setRefused]       = useState<AlertRefused[]>([])
+  const [staleLeads, setStaleLeads] = useState<AlertLead[]>([])
+  const [alertsLoading, setAlertsLoading] = useState(true)
 
-  // File d'attente unifiée
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const res = await fetch("/api/admin/dashboard")
+        if (res.ok) {
+          const d = await res.json()
+          setLeads(d.leads        ?? [])
+          setAudits(d.audits      ?? [])
+          setCand(d.candidatures  ?? [])
+          setClients(d.clientsCount ?? 0)
+        }
+      } catch { /* fallback to empty */ }
+      finally { setLoading(false) }
+    }
+
+    async function loadAlerts() {
+      try {
+        const res = await fetch("/api/admin/alerts")
+        if (res.ok) {
+          const d = await res.json()
+          setExpired(d.expired       ?? [])
+          setRefused(d.refused       ?? [])
+          setStaleLeads(d.staleLeads ?? [])
+        }
+      } catch { /* non-fatal */ }
+      finally { setAlertsLoading(false) }
+    }
+
+    loadDashboard()
+    loadAlerts()
+  }, [])
+
+  // ── KPIs ───────────────────────────────────────────────────────────────────
+  const auditsEnAttente       = audits.filter(a => a.statut === "nouveau" || a.statut === "en_attente").length
+  const leadsNouveaux         = leads.filter(l => !l.statut || l.statut === "nouveau").length
+  const candidaturesNouvelles = candidatures.filter(c => !c.statut || c.statut === "nouveau").length
+
+  const kpis = [
+    { label: "Clients actifs",    value: loading ? "…" : clientsCount,           icon: Users,        color: "#60A5FA" },
+    { label: "Audits en attente", value: loading ? "…" : auditsEnAttente,         icon: SearchCheck,  color: "#F59E0B" },
+    { label: "Leads nouveaux",    value: loading ? "…" : leadsNouveaux,           icon: Target,       color: "#10B981" },
+    { label: "Candidatures",      value: loading ? "…" : candidaturesNouvelles,   icon: ClipboardList,color: "#A78BFA" },
+  ]
+
+  // ── File d'attente ─────────────────────────────────────────────────────────
   type QueueItem = { type: string; label: string; detail: string; depuis: string; href: string; urgence: number }
   const queue: QueueItem[] = [
-    ...audits.filter(a => a.statut === 'nouveau' || a.statut === 'en_attente').map(a => ({
-      type: 'Audit',
-      label: a.nom_etablissement,
-      detail: a.adresse ?? a.email,
-      depuis: a.created_at,
-      href: '/admin-noxyera/audits',
-      urgence: 1,
+    ...audits.filter(a => a.statut === "nouveau" || a.statut === "en_attente").map(a => ({
+      type: "Audit", label: a.nom_etablissement, detail: a.adresse ?? a.email,
+      depuis: a.created_at, href: "/admin-noxyera/audits", urgence: 1,
     })),
-    ...leads.filter(l => !l.statut || l.statut === 'nouveau').slice(0, 5).map(l => ({
-      type: 'Lead',
-      label: l.secteur ?? 'Estimateur',
-      detail: `${l.superficie ?? '?'} m²`,
-      depuis: l.created_at,
-      href: '/admin-noxyera/leads',
-      urgence: 2,
+    ...leads.filter(l => !l.statut || l.statut === "nouveau").slice(0, 5).map(l => ({
+      type: "Lead", label: l.secteur ?? "Estimateur", detail: `${l.superficie ?? "?"} m²`,
+      depuis: l.created_at, href: "/admin-noxyera/leads", urgence: 2,
     })),
-    ...candidatures.filter(c => !c.statut || c.statut === 'nouveau').map(c => ({
-      type: 'Candidature',
-      label: `${c.prenom} ${c.nom}`,
-      detail: c.ville,
-      depuis: c.created_at,
-      href: '/admin-noxyera/candidatures',
-      urgence: 3,
+    ...candidatures.filter(c => !c.statut || c.statut === "nouveau").map(c => ({
+      type: "Candidature", label: `${c.prenom} ${c.nom}`, detail: c.ville,
+      depuis: c.created_at, href: "/admin-noxyera/candidatures", urgence: 3,
     })),
   ].sort((a, b) => a.urgence - b.urgence || new Date(b.depuis).getTime() - new Date(a.depuis).getTime())
 
-  // Activité récente
+  // ── Activité récente ───────────────────────────────────────────────────────
   type ActivityItem = { type: string; label: string; date: string; statut?: string }
   const recent: ActivityItem[] = [
-    ...leads.slice(0, 3).map(l => ({ type: 'Lead', label: l.secteur ?? 'Estimateur', date: l.created_at, statut: l.statut })),
-    ...audits.slice(0, 3).map(a => ({ type: 'Audit', label: a.nom_etablissement, date: a.created_at, statut: a.statut })),
-    ...candidatures.slice(0, 3).map(c => ({ type: 'Candidature', label: `${c.prenom} ${c.nom}`, date: c.created_at, statut: c.statut })),
+    ...leads.slice(0, 3).map(l => ({ type: "Lead", label: l.secteur ?? "Estimateur", date: l.created_at, statut: l.statut ?? undefined })),
+    ...audits.slice(0, 3).map(a => ({ type: "Audit", label: a.nom_etablissement, date: a.created_at, statut: a.statut ?? undefined })),
+    ...candidatures.slice(0, 3).map(c => ({ type: "Candidature", label: `${c.prenom} ${c.nom}`, date: c.created_at, statut: c.statut ?? undefined })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
 
-  const kpis = [
-    { label: "Clients actifs", value: clientsActifs, icon: Users, color: "#60A5FA" },
-    { label: "Audits en attente", value: auditsEnAttente, icon: SearchCheck, color: "#F59E0B" },
-    { label: "Leads nouveaux", value: leadsNouveaux, icon: Target, color: "#10B981" },
-    { label: "Candidatures", value: candidaturesNouvelles, icon: ClipboardList, color: "#A78BFA" },
-  ]
-
-  function typeBadgeStyle(type: string) {
-    if (type === 'Lead') return { background: 'rgba(16,185,129,0.15)', color: '#10B981' }
-    if (type === 'Audit') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
-    return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
-  }
-
-  function queueTypeBadgeStyle(type: string) {
-    if (type === 'Audit') return { background: 'rgba(220,38,38,0.15)', color: '#DC2626' }
-    if (type === 'Lead') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
-    return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
-  }
+  // ── Total alerts ───────────────────────────────────────────────────────────
+  const totalAlerts = expired.length + refused.length + staleLeads.length
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -120,6 +145,55 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      {/* ── Alertes ── */}
+      {!alertsLoading && totalAlerts > 0 && (
+        <div style={{ background: "#0D1F17", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(239,68,68,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertTriangle size={14} style={{ color: "#DC2626" }} />
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "#DC2626", margin: 0 }}>
+                Alertes — {totalAlerts} action{totalAlerts > 1 ? "s" : ""} requise{totalAlerts > 1 ? "s" : ""}
+              </h2>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {/* Expirées */}
+            {expired.map(item => (
+              <div key={item.id} style={{ padding: "11px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(239,68,68,0.12)", color: "#EF4444", fontWeight: 600, flexShrink: 0 }}>Expirée</span>
+                <span style={{ fontSize: 13, color: "white", flex: 1 }}>{item.sites?.nom ?? "Site inconnu"}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
+                  offre expirée le {new Date(item.date_prevue).toLocaleDateString("fr-FR")} — à reproposer
+                </span>
+                <Link href="/admin-noxyera/planning" style={{ fontSize: 11, color: "#F26522", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Traiter →</Link>
+              </div>
+            ))}
+            {/* Refusées */}
+            {refused.map(item => (
+              <div key={item.id} style={{ padding: "11px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(245,158,11,0.12)", color: "#F59E0B", fontWeight: 600, flexShrink: 0 }}>Refusée</span>
+                <span style={{ fontSize: 13, color: "white", flex: 1 }}>{item.sites?.nom ?? "Site inconnu"}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
+                  refusée {timeAgo(item.refused_at)} — à reproposer
+                </span>
+                <Link href="/admin-noxyera/planning" style={{ fontSize: 11, color: "#F26522", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Traiter →</Link>
+              </div>
+            ))}
+            {/* Leads en attente */}
+            {staleLeads.map(lead => (
+              <div key={lead.id} style={{ padding: "11px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(234,179,8,0.12)", color: "#EAB308", fontWeight: 600, flexShrink: 0 }}>Lead froid</span>
+                <span style={{ fontSize: 13, color: "white", flex: 1 }}>{lead.email}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
+                  {lead.secteur} — en attente depuis {hoursAgo(lead.created_at)}h
+                </span>
+                <Link href="/admin-noxyera/leads" style={{ fontSize: 11, color: "#F26522", fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>Traiter →</Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(({ label, value, icon: Icon, color }) => (
@@ -128,8 +202,7 @@ export default async function AdminPage() {
               <p className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
                 {label}
               </p>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(255,255,255,0.05)" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.05)" }}>
                 <Icon size={14} style={{ color }} />
               </div>
             </div>
@@ -143,7 +216,9 @@ export default async function AdminPage() {
         <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <h2 className="font-semibold text-sm text-white">File d&apos;attente</h2>
         </div>
-        {queue.length === 0 ? (
+        {loading ? (
+          <div className="px-5 py-8 text-center" style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Chargement…</div>
+        ) : queue.length === 0 ? (
           <div className="px-5 py-8 text-center" style={{ color: "#10B981", fontSize: "14px" }}>
             Aucune action en attente ✓
           </div>
@@ -164,8 +239,7 @@ export default async function AdminPage() {
                 {queue.map((item, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                     <td className="px-5 py-3">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium"
-                        style={queueTypeBadgeStyle(item.type)}>
+                      <span className="px-2 py-1 rounded-full text-xs font-medium" style={queueTypeBadgeStyle(item.type)}>
                         {item.type}
                       </span>
                     </td>
@@ -175,9 +249,7 @@ export default async function AdminPage() {
                       {timeAgo(item.depuis)}
                     </td>
                     <td className="px-5 py-3">
-                      <Link href={item.href}
-                        className="text-xs font-semibold"
-                        style={{ color: "#F26522", textDecoration: "none" }}>
+                      <Link href={item.href} className="text-xs font-semibold" style={{ color: "#F26522", textDecoration: "none" }}>
                         Voir →
                       </Link>
                     </td>
@@ -194,7 +266,9 @@ export default async function AdminPage() {
         <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <h2 className="font-semibold text-sm text-white">Activité récente</h2>
         </div>
-        {recent.length === 0 ? (
+        {loading ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Chargement…</div>
+        ) : recent.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
             Aucune activité récente
           </div>
@@ -202,8 +276,7 @@ export default async function AdminPage() {
           <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
             {recent.map((item, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-3">
-                <span className="px-2 py-1 rounded-full text-xs font-medium shrink-0"
-                  style={typeBadgeStyle(item.type)}>
+                <span className="px-2 py-1 rounded-full text-xs font-medium shrink-0" style={typeBadgeStyle(item.type)}>
                   {item.type}
                 </span>
                 <p className="flex-1 text-sm text-white truncate">{item.label}</p>

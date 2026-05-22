@@ -31,6 +31,16 @@ const ZONES = [
   { id: "toiture", label: "Toiture", Icon: Home },
 ]
 
+// Default zones pre-checked by sector type (used only on first visit, no previous rapport)
+const SECTEUR_ZONES: Record<string, string[]> = {
+  restaurant:      ["cuisine", "salle", "cave", "reserves", "poubelles"],
+  hotel:           ["salle", "exterieurs", "poubelles"],
+  entrepot:        ["reserves", "exterieurs", "poubelles"],
+  agroalimentaire: ["cuisine", "reserves", "poubelles", "exterieurs"],
+  immeuble:        ["cave", "exterieurs", "poubelles", "toiture"],
+  bureau:          ["salle", "exterieurs"],
+}
+
 export default function ZonesPage() {
   const params = useParams()
   const router = useRouter()
@@ -39,6 +49,7 @@ export default function ZonesPage() {
   const [selectedZones, setSelectedZones] = useState<string[]>([])
   const [prefillDate, setPrefillDate] = useState<string | null>(null)
   const [prefillDismissed, setPrefillDismissed] = useState(false)
+  const [secteurPrefill, setSecteurPrefill] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -102,6 +113,14 @@ export default function ZonesPage() {
               })
             )
           }
+          return // prefill from last report — skip sector defaults
+        }
+
+        // No previous report — pre-check zones by sector type
+        const secteur = localStorage.getItem(`mission-${missionId}-secteur`)
+        if (secteur && SECTEUR_ZONES[secteur]) {
+          setSelectedZones(SECTEUR_ZONES[secteur])
+          setSecteurPrefill(secteur)
         }
       } catch {
         // Ignore
@@ -151,7 +170,7 @@ export default function ZonesPage() {
         Sélectionnez toutes les zones traitées lors de cette intervention
       </p>
 
-      {/* Prefill banner */}
+      {/* Prefill banner — last report */}
       {prefillDate && !prefillDismissed && selectedZones.length > 0 && (
         <div style={{
           background: "#D1FAE5", border: "1px solid #A7F3D0", borderRadius: "10px",
@@ -165,6 +184,25 @@ export default function ZonesPage() {
           <button
             onClick={handleReset}
             style={{ background: "none", border: "none", cursor: "pointer", color: "#065F46", display: "flex", alignItems: "center" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Prefill banner — sector defaults (first visit) */}
+      {secteurPrefill && !prefillDate && !prefillDismissed && selectedZones.length > 0 && (
+        <div style={{
+          background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "10px",
+          padding: "12px 16px", marginBottom: "20px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <span style={{ fontSize: "13px", color: "#1D4ED8", fontWeight: 500 }}>
+            Zones suggérées pour ce type de site — modifiez si besoin
+          </span>
+          <button
+            onClick={handleReset}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#1D4ED8", display: "flex", alignItems: "center" }}
           >
             <X size={14} />
           </button>

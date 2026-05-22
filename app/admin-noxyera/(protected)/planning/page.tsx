@@ -1,9 +1,176 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, ChevronLeft, ChevronRight, Users, Clock, CheckCircle2, X, UserCheck, MapPin, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Calendar, ChevronLeft, ChevronRight, Users, Clock, CheckCircle2, X, UserCheck, MapPin, AlertTriangle, RefreshCw } from "lucide-react";
 import { DEMO_INTERVENTIONS, ADMIN_TECHNICIENS as DEMO_TECHNICIENS, DEMO_CLIENTS } from "@/lib/demo-data";
 import type { TypeIntervention, StatutIntervention } from "@/lib/demo-data";
+
+// ── Types pour les données réelles ───────────────────────────────────────────
+interface TodayIntervention {
+  id: string
+  type: string
+  statut: string
+  date_prevue: string
+  heure_arrivee: string | null
+  sites: { nom: string; adresse: string } | null
+  technicien: { prenom: string; nom: string } | null
+}
+
+const STATUT_TODAY: Record<string, { label: string; color: string; bg: string; border: string; pulse?: boolean }> = {
+  proposee: { label: "En attente de réponse",  color: "#94A3B8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)" },
+  planifie: { label: "Confirmée",              color: "#60A5FA", bg: "rgba(96,165,250,0.10)",  border: "rgba(96,165,250,0.25)" },
+  en_cours: { label: "En cours",               color: "#10B981", bg: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.3)", pulse: true },
+  realise:  { label: "Terminée",               color: "#10B981", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.15)" },
+  expire:   { label: "Expirée — à reproposer", color: "#EF4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)" },
+  annule:   { label: "Annulée",                color: "#6B7280", bg: "rgba(107,114,128,0.06)", border: "rgba(107,114,128,0.15)" },
+}
+
+// ── Section "Aujourd'hui en temps réel" ────────────────────────────────────
+function TodayView() {
+  const [interventions, setInterventions] = useState<TodayIntervention[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [lastRefresh, setLastRefresh]     = useState<Date>(new Date())
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/planning/today")
+      if (res.ok) {
+        const data = await res.json()
+        setInterventions(data)
+      }
+    } catch { /* non-fatal */ }
+    finally {
+      setLoading(false)
+      setLastRefresh(new Date())
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+    const interval = setInterval(load, 60_000) // rafraîchissement toutes les 60s
+    return () => clearInterval(interval)
+  }, [load])
+
+  const TYPE_LABELS: Record<string, string> = {
+    preventif: "Préventif", curatif: "Curatif", urgence: "Urgence", audit: "Audit",
+  }
+
+  return (
+    <div style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, marginBottom: 0 }}>
+      {/* Header */}
+      <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: "white", margin: 0 }}>
+            Interventions du jour
+          </h2>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: "2px 0 0", fontFamily: "monospace" }}>
+            {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>
+            Mis à jour {lastRefresh.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          <button
+            onClick={load}
+            style={{ background: "rgba(255,255,255,0.07)", border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: "rgba(255,255,255,0.5)", fontSize: 11 }}
+          >
+            <RefreshCw size={11} /> Rafraîchir
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div style={{ padding: "32px 20px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+          Chargement…
+        </div>
+      ) : interventions.length === 0 ? (
+        <div style={{ padding: "32px 20px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+          Aucune intervention prévue aujourd&apos;hui.
+        </div>
+      ) : (
+        <div>
+          {interventions.map((inter, i) => {
+            const cfg = STATUT_TODAY[inter.statut] ?? STATUT_TODAY.proposee
+            const isEnCours = inter.statut === "en_cours"
+            const isRealise = inter.statut === "realise"
+            const isAnnule  = inter.statut === "annule"
+
+            return (
+              <div
+                key={inter.id}
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: i < interventions.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                  borderLeft: `3px solid ${cfg.color}`,
+                  opacity: isAnnule ? 0.5 : 1,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  {/* Heure */}
+                  <div style={{ textAlign: "center", flexShrink: 0, minWidth: 48 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: cfg.color, margin: 0, fontFamily: "monospace" }}>
+                      {new Date(inter.date_prevue).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>
+                      {TYPE_LABELS[inter.type] ?? inter.type}
+                    </p>
+                  </div>
+
+                  {/* Infos */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 600, color: "white",
+                        textDecoration: isAnnule ? "line-through" : "none",
+                      }}>
+                        {inter.sites?.nom ?? "Site inconnu"}
+                      </span>
+
+                      {/* Statut badge */}
+                      <span style={{
+                        fontSize: 11, padding: "2px 8px", borderRadius: 20, fontWeight: 600,
+                        background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}>
+                        {isEnCours && (
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }} />
+                        )}
+                        {isRealise ? "✓ " : ""}{cfg.label}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
+                      {inter.sites?.adresse && (
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
+                          <MapPin size={9} /> {inter.sites.adresse}
+                        </span>
+                      )}
+                      {inter.technicien ? (
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                          🔧 {inter.technicien.prenom} {inter.technicien.nom}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#F59E0B" }}>⚠ Non assigné</span>
+                      )}
+                      {isEnCours && inter.heure_arrivee && (
+                        <span style={{ fontSize: 11, color: "#10B981", fontWeight: 600 }}>
+                          Arrivé à {new Date(inter.heure_arrivee).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }`}</style>
+    </div>
+  )
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface InterventionWithTech {
@@ -236,6 +403,9 @@ export default function PlanningPage() {
           </div>
         )}
       </div>
+
+      {/* Interventions du jour — temps réel */}
+      <TodayView />
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">

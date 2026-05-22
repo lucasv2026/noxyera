@@ -1,11 +1,40 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { ArrowLeft, Check } from "lucide-react"
-import { SUPABASE_DEMO_MISSIONS_TODAY, SUPABASE_DEMO_MISSIONS_WEEK, SUPABASE_DEMO_TECH_PROFILE } from "@/lib/demo-data"
+import { createBrowserClient } from "@supabase/ssr"
 
-const DEMO_MISSIONS = [...SUPABASE_DEMO_MISSIONS_TODAY, ...SUPABASE_DEMO_MISSIONS_WEEK]
+interface ProduitLine {
+  id: string
+  nom: string
+  biocide: string
+  quantite: string
+}
+
+interface TechProfile {
+  id: string
+  prenom: string
+  nom: string
+  numero_certif: string | null
+  user_id: string
+}
+
+interface SiteInfo {
+  nom: string
+  adresse: string
+  secteur: string
+}
+
+interface InterventionInfo {
+  id: string
+  type: string
+  date_prevue: string
+  technicien_id: string | null
+  sites: SiteInfo | null
+}
+
+type State = "idle" | "loading" | "success"
 
 function ProgressBar({ step }: { step: number }) {
   const total = 4
@@ -23,15 +52,6 @@ function ProgressBar({ step }: { step: number }) {
   )
 }
 
-interface ProduitLine {
-  id: string
-  nom: string
-  biocide: string
-  quantite: string
-}
-
-type State = "idle" | "loading" | "success"
-
 export default function SignaturePage() {
   const params = useParams()
   const router = useRouter()
@@ -44,37 +64,61 @@ export default function SignaturePage() {
   const [hasSignature, setHasSignature] = useState(false)
   const [state, setState] = useState<State>("idle")
 
-  // Recap data
+  // Recap data from localStorage
   const [zones, setZones] = useState<string[]>([])
   const [produits, setProduits] = useState<ProduitLine[]>([])
   const [photoCount, setPhotoCount] = useState(0)
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
 
-  const mission = DEMO_MISSIONS.find((m) => m.id === missionId) ?? DEMO_MISSIONS[0]
+  // Real Supabase data
+  const [techProfile, setTechProfile] = useState<TechProfile | null>(null)
+  const [intervention, setIntervention] = useState<InterventionInfo | null>(null)
 
+  // Load localStorage data
   useEffect(() => {
     if (typeof window === "undefined") return
-
     const storedZones = localStorage.getItem(`mission-${missionId}-zones`)
-    if (storedZones) {
-      try { setZones(JSON.parse(storedZones)) } catch { /* ignore */ }
-    }
-
+    if (storedZones) { try { setZones(JSON.parse(storedZones)) } catch { /* ignore */ } }
     const storedProduits = localStorage.getItem(`mission-${missionId}-produits`)
-    if (storedProduits) {
-      try { setProduits(JSON.parse(storedProduits)) } catch { /* ignore */ }
-    }
-
+    if (storedProduits) { try { setProduits(JSON.parse(storedProduits)) } catch { /* ignore */ } }
     const storedCount = localStorage.getItem(`mission-${missionId}-photos-count`)
     if (storedCount) setPhotoCount(parseInt(storedCount, 10) || 0)
-
     const storedUrls = sessionStorage.getItem(`mission-${missionId}-photo-urls`)
-    if (storedUrls) {
-      try { setPhotoUrls(JSON.parse(storedUrls)) } catch { /* ignore */ }
-    }
+    if (storedUrls) { try { setPhotoUrls(JSON.parse(storedUrls)) } catch { /* ignore */ } }
   }, [missionId])
 
-  // Draw placeholder text on canvas
+  // Fetch real tech profile + intervention from Supabase
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    async function fetchData() {
+      // Current user's profile
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, prenom, nom, numero_certif, user_id")
+          .eq("user_id", user.id)
+          .maybeSingle()
+        if (profile) setTechProfile(profile as TechProfile)
+      }
+
+      // Intervention + site info
+      const { data } = await supabase
+        .from("interventions")
+        .select("id, type, date_prevue, technicien_id, sites(nom, adresse, secteur)")
+        .eq("id", missionId)
+        .maybeSingle()
+      if (data) setIntervention(data as unknown as InterventionInfo)
+    }
+
+    fetchData()
+  }, [missionId])
+
+  // Draw placeholder on canvas
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -94,10 +138,7 @@ export default function SignaturePage() {
   function getPos(e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect()
     if ("touches" in e) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top,
-      }
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
     }
     return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top }
   }
@@ -107,14 +148,9 @@ export default function SignaturePage() {
     if (!canvas) return
     isDrawing.current = true
     lastPos.current = getPos(e, canvas)
-
-    // Clear placeholder on first draw
     if (!hasSignature) {
       const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.fillStyle = "#F9FAFB"
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-      }
+      if (ctx) { ctx.fillStyle = "#F9FAFB"; ctx.fillRect(0, 0, canvas.width, canvas.height) }
       setHasSignature(true)
     }
   }
@@ -125,7 +161,6 @@ export default function SignaturePage() {
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
-
     const pos = getPos(e, canvas)
     ctx.beginPath()
     ctx.moveTo(lastPos.current.x, lastPos.current.y)
@@ -164,42 +199,43 @@ export default function SignaturePage() {
     if (!hasSignature) return
     setState("loading")
 
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+    const canvas = canvasRef.current
+    const signatureDataUrl = canvas ? canvas.toDataURL("image/png") : null
 
-    if (!isDemoMode) {
-      try {
-        const { createClient } = await import("@supabase/supabase-js")
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
+    const site = intervention?.sites
+    const techNom = techProfile
+      ? `${techProfile.prenom} ${techProfile.nom}`
+      : "Technicien Noxyera"
 
-        // Get signature as base64
-        const canvas = canvasRef.current
-        const signatureData = canvas ? canvas.toDataURL("image/png") : null
+    try {
+      const res = await fetch("/api/rapport/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interventionId:       missionId,
+          technicienId:         techProfile?.id ?? null,
+          zonesTraitees:        zones,
+          produitsUtilises:     produits,
+          observations:         "",
+          presenceActive:       false,
+          recommandationSuivi:  false,
+          photosUrl:            photoUrls,
+          signatureDataUrl,
+          siteName:             site?.nom ?? "",
+          siteAdresse:          site?.adresse ?? "",
+          secteur:              site?.secteur ?? "",
+          type:                 intervention?.type ?? "preventif",
+          technicienNom:        techNom,
+          datePrevue:           intervention?.date_prevue ?? "",
+        }),
+      })
 
-        // Insert rapport
-        const { data: rapport } = await supabase
-          .from("rapports")
-          .insert({
-            intervention_id: missionId,
-            zones_traitees: zones,
-            produits_utilises: produits,
-            haccp_conforme: true,
-            signe_le: new Date().toISOString(),
-          })
-          .select()
-          .single()
-
-        // Update intervention status
-        await supabase
-          .from("interventions")
-          .update({ statut: "termine", date_reelle: new Date().toISOString() })
-          .eq("id", missionId)
-
-      } catch {
-        // Proceed anyway in case of error
+      if (!res.ok) {
+        console.error("[signature] rapport/generate error", res.status)
       }
+    } catch (err) {
+      console.error("[signature] rapport/generate exception:", err)
+      // Proceed anyway — don't block the technicien
     }
 
     // Cleanup localStorage
@@ -208,6 +244,8 @@ export default function SignaturePage() {
       localStorage.removeItem(`mission-${missionId}-produits`)
       localStorage.removeItem(`mission-${missionId}-photos-count`)
       localStorage.removeItem(`mission-${missionId}-arrivee`)
+      localStorage.removeItem(`mission-${missionId}-secteur`)
+      localStorage.removeItem(`mission-${missionId}-prefill`)
       try { sessionStorage.removeItem(`mission-${missionId}-photo-urls`) } catch { /* ignore */ }
     }
 
@@ -218,14 +256,8 @@ export default function SignaturePage() {
   }
 
   const ZONE_LABELS: Record<string, string> = {
-    cuisine: "Cuisine",
-    cave: "Cave",
-    reserves: "Réserves",
-    exterieurs: "Extérieurs",
-    vestiaires: "Vestiaires",
-    poubelles: "Poubelles",
-    salle: "Salle",
-    toiture: "Toiture",
+    cuisine: "Cuisine", cave: "Cave", reserves: "Réserves", exterieurs: "Extérieurs",
+    vestiaires: "Vestiaires", poubelles: "Poubelles", salle: "Salle", toiture: "Toiture",
   }
 
   if (state === "success") {
@@ -294,22 +326,13 @@ export default function SignaturePage() {
         <canvas
           ref={canvasRef}
           style={{
-            width: "100%",
-            height: "180px",
+            width: "100%", height: "180px",
             border: hasSignature ? "2px solid #1B3A2D" : "2px dashed #D1D5DB",
-            borderRadius: "12px",
-            background: "#F9FAFB",
-            cursor: "crosshair",
-            touchAction: "none",
-            display: "block",
+            borderRadius: "12px", background: "#F9FAFB",
+            cursor: "crosshair", touchAction: "none", display: "block",
           }}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
+          onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
         />
         {hasSignature && (
           <p style={{ fontSize: "11px", color: "#27AE60", margin: "4px 0 0", fontWeight: 600 }}>
@@ -323,6 +346,17 @@ export default function SignaturePage() {
         <h2 style={{ fontSize: "14px", fontWeight: 700, color: "#1B3A2D", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           Récapitulatif
         </h2>
+
+        {/* Site */}
+        {intervention?.sites && (
+          <div style={{ marginBottom: "16px" }}>
+            <p style={{ fontSize: "12px", color: "#9CA3AF", fontWeight: 600, margin: "0 0 4px", textTransform: "uppercase" }}>
+              Site
+            </p>
+            <p style={{ fontSize: "13px", color: "#374151", margin: 0, fontWeight: 600 }}>{intervention.sites.nom}</p>
+            <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>{intervention.sites.adresse}</p>
+          </div>
+        )}
 
         {/* Zones */}
         <div style={{ marginBottom: "16px" }}>
@@ -374,12 +408,7 @@ export default function SignaturePage() {
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {photoUrls.slice(0, 4).map((url, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={i}
-                      src={url}
-                      alt=""
-                      style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover" }}
-                    />
+                    <img key={i} src={url} alt="" style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover" }} />
                   ))}
                   {photoUrls.length > 4 && (
                     <div style={{ width: "60px", height: "60px", borderRadius: "6px", background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#9CA3AF" }}>
@@ -400,21 +429,20 @@ export default function SignaturePage() {
             Technicien
           </p>
           <p style={{ fontSize: "13px", color: "#374151", margin: 0 }}>
-            {SUPABASE_DEMO_TECH_PROFILE.prenom} {SUPABASE_DEMO_TECH_PROFILE.nom}
+            {techProfile ? `${techProfile.prenom} ${techProfile.nom}` : "—"}
           </p>
-          <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>
-            N° Certibiocide : 14521
-          </p>
+          {techProfile?.numero_certif && (
+            <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>
+              N° Certibiocide : {techProfile.numero_certif}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Sticky footer */}
       <div style={{
-        position: "fixed",
-        bottom: 0, left: 0, right: 0,
-        padding: "16px 24px",
-        background: "white",
-        borderTop: "1px solid #E5E7EB",
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        padding: "16px 24px", background: "white", borderTop: "1px solid #E5E7EB",
       }}>
         <div style={{ maxWidth: "480px", margin: "0 auto" }}>
           {!hasSignature && (
@@ -426,17 +454,10 @@ export default function SignaturePage() {
             onClick={handleCloture}
             disabled={!hasSignature}
             style={{
-              width: "100%",
-              height: "64px",
-              borderRadius: "12px",
-              background: "#F26522",
-              color: "white",
-              fontSize: "17px",
-              fontWeight: 700,
-              border: "none",
-              cursor: !hasSignature ? "not-allowed" : "pointer",
-              opacity: !hasSignature ? 0.4 : 1,
-              transition: "opacity 0.15s",
+              width: "100%", height: "64px", borderRadius: "12px",
+              background: "#F26522", color: "white", fontSize: "17px", fontWeight: 700,
+              border: "none", cursor: !hasSignature ? "not-allowed" : "pointer",
+              opacity: !hasSignature ? 0.4 : 1, transition: "opacity 0.15s",
             }}
           >
             Générer le rapport HACCP et clôturer

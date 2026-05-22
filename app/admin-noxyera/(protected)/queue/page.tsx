@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 function formatDate(dateStr: string) {
@@ -18,38 +20,73 @@ function timeAgo(dateStr: string): string {
   return `il y a ${days}j`
 }
 
-export default async function QueuePage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+function typeBadgeStyle(type: string) {
+  if (type === 'Audit') return { background: 'rgba(220,38,38,0.15)', color: '#DC2626' }
+  if (type === 'Lead') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
+  return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
+}
 
-  const [
-    { data: leadsData },
-    { data: auditsData },
-    { data: candidaturesData },
-  ] = await Promise.all([
-    supabase.from('leads').select('id, secteur, superficie, created_at, statut, email').order('created_at', { ascending: false }),
-    supabase.from('audits').select('id, nom_etablissement, email, statut, created_at, adresse, telephone').order('created_at', { ascending: false }),
-    supabase.from('candidatures_techniciens').select('id, prenom, nom, email, ville, experience, statut, created_at, telephone').order('created_at', { ascending: false }),
-  ])
+type Lead = { id: string; secteur: string | null; superficie: string | null; created_at: string; statut: string | null; email: string | null }
+type Audit = { id: string; nom_etablissement: string | null; email: string | null; statut: string | null; created_at: string; adresse: string | null; telephone: string | null }
+type Candidature = { id: string; prenom: string | null; nom: string | null; email: string | null; ville: string | null; experience: string | null; statut: string | null; created_at: string; telephone: string | null }
 
-  const leads = (leadsData ?? []).filter(l => !l.statut || l.statut === 'nouveau')
-  const audits = (auditsData ?? []).filter(a => a.statut === 'nouveau' || a.statut === 'en_attente')
-  const candidatures = (candidaturesData ?? []).filter(c => !c.statut || c.statut === 'nouveau')
+type QueueItem = {
+  type: 'Audit' | 'Lead' | 'Candidature'
+  label: string
+  detail: string
+  email: string
+  date: string
+  href: string
+  urgence: number
+}
 
-  type QueueItem = {
-    type: 'Audit' | 'Lead' | 'Candidature'
-    label: string
-    detail: string
-    email: string
-    date: string
-    href: string
-    urgence: number
-  }
+const cardStyle = {
+  background: "#122B1E",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "16px",
+}
+
+const thStyle: React.CSSProperties = {
+  padding: "10px 20px",
+  textAlign: "left" as const,
+  fontSize: "11px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+  color: "rgba(255,255,255,0.3)",
+  fontFamily: "monospace",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: "12px 20px",
+  fontSize: "13px",
+  color: "rgba(255,255,255,0.75)",
+  borderBottom: "1px solid rgba(255,255,255,0.04)",
+  verticalAlign: "top" as const,
+}
+
+export default function QueuePage() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [audits, setAudits] = useState<Audit[]>([])
+  const [candidatures, setCandidatures] = useState<Candidature[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/queue')
+      .then(r => r.json())
+      .then((d: { leads: Lead[]; audits: Audit[]; candidatures: Candidature[] }) => {
+        setLeads(d.leads ?? [])
+        setAudits(d.audits ?? [])
+        setCandidatures(d.candidatures ?? [])
+      })
+      .catch(() => {})
+  }, [])
+
+  const filteredLeads = leads.filter(l => !l.statut || l.statut === 'nouveau')
+  const filteredAudits = audits.filter(a => a.statut === 'nouveau' || a.statut === 'en_attente')
+  const filteredCandidatures = candidatures.filter(c => !c.statut || c.statut === 'nouveau')
 
   const queue: QueueItem[] = [
-    ...audits.map(a => ({
+    ...filteredAudits.map(a => ({
       type: 'Audit' as const,
       label: a.nom_etablissement ?? '—',
       detail: a.adresse ?? '—',
@@ -58,7 +95,7 @@ export default async function QueuePage() {
       href: '/admin-noxyera/audits',
       urgence: 1,
     })),
-    ...leads.map(l => ({
+    ...filteredLeads.map(l => ({
       type: 'Lead' as const,
       label: l.secteur ?? 'Estimateur',
       detail: `${l.superficie ?? '?'} m²`,
@@ -67,7 +104,7 @@ export default async function QueuePage() {
       href: '/admin-noxyera/leads',
       urgence: 2,
     })),
-    ...candidatures.map(c => ({
+    ...filteredCandidatures.map(c => ({
       type: 'Candidature' as const,
       label: `${c.prenom} ${c.nom}`,
       detail: `${c.ville ?? '—'} · ${c.experience ?? '?'} ans d'exp.`,
@@ -77,37 +114,6 @@ export default async function QueuePage() {
       urgence: 3,
     })),
   ].sort((a, b) => a.urgence - b.urgence || new Date(b.date).getTime() - new Date(a.date).getTime())
-
-  function typeBadgeStyle(type: string) {
-    if (type === 'Audit') return { background: 'rgba(220,38,38,0.15)', color: '#DC2626' }
-    if (type === 'Lead') return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
-    return { background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }
-  }
-
-  const cardStyle = {
-    background: "#122B1E",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: "16px",
-  }
-
-  const thStyle: React.CSSProperties = {
-    padding: "10px 20px",
-    textAlign: "left" as const,
-    fontSize: "11px",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    color: "rgba(255,255,255,0.3)",
-    fontFamily: "monospace",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  }
-
-  const tdStyle: React.CSSProperties = {
-    padding: "12px 20px",
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.75)",
-    borderBottom: "1px solid rgba(255,255,255,0.04)",
-    verticalAlign: "top" as const,
-  }
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -122,9 +128,9 @@ export default async function QueuePage() {
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Audits", value: audits.length, color: "#DC2626" },
-          { label: "Leads", value: leads.length, color: "#F59E0B" },
-          { label: "Candidatures", value: candidatures.length, color: "#A78BFA" },
+          { label: "Audits", value: filteredAudits.length, color: "#DC2626" },
+          { label: "Leads", value: filteredLeads.length, color: "#F59E0B" },
+          { label: "Candidatures", value: filteredCandidatures.length, color: "#A78BFA" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ ...cardStyle, padding: "16px 20px" }}>
             <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.4)", fontFamily: "monospace", marginBottom: "6px" }}>

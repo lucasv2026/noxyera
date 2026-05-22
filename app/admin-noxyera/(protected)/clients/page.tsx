@@ -1,19 +1,26 @@
-import { createClient } from '@supabase/supabase-js'
+'use client'
+
+import { useEffect, useState } from 'react'
 import ClientsTable from './ClientsTable'
 
-export default async function AdminClientsPage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+type Client = {
+  id: string
+  full_name: string | null
+  email: string | null
+  telephone: string | null
+  entreprise: string | null
+  created_at: string
+}
 
-  const { data: clients } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, telephone, entreprise, created_at')
-    .eq('role', 'client')
-    .order('created_at', { ascending: false })
+export default function AdminClientsPage() {
+  const [clients, setClients] = useState<Client[]>([])
 
-  const safeClients = clients ?? []
+  useEffect(() => {
+    fetch('/api/admin/clients')
+      .then(r => r.json())
+      .then((data: Client[]) => setClients(data))
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -22,7 +29,7 @@ export default async function AdminClientsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Clients CRM</h1>
           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-            {safeClients.length} client{safeClients.length !== 1 ? 's' : ''} enregistré{safeClients.length !== 1 ? 's' : ''}
+            {clients.length} client{clients.length !== 1 ? 's' : ''} enregistré{clients.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
@@ -30,8 +37,8 @@ export default async function AdminClientsPage() {
       {/* KPI */}
       <div className="grid grid-cols-2 gap-4">
         {[
-          { label: "Total clients", value: safeClients.length, color: "#60A5FA" },
-          { label: "Ce mois", value: safeClients.filter(c => {
+          { label: "Total clients", value: clients.length, color: "#60A5FA" },
+          { label: "Ce mois", value: clients.filter(c => {
             const d = new Date(c.created_at)
             const now = new Date()
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
@@ -47,7 +54,7 @@ export default async function AdminClientsPage() {
         ))}
       </div>
 
-      <ClientsTable clients={safeClients} />
+      <ClientsTable clients={clients} />
     </div>
   )
 }

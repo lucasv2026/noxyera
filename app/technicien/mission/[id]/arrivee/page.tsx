@@ -2,10 +2,35 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { SUPABASE_DEMO_MISSIONS_TODAY, SUPABASE_DEMO_MISSIONS_WEEK } from "@/lib/demo-data"
-import { MapPin, ArrowLeft } from "lucide-react"
+import { MapPin, ArrowLeft, Clock } from "lucide-react"
+import { createBrowserClient } from "@supabase/ssr"
 
-const DEMO_MISSIONS = [...SUPABASE_DEMO_MISSIONS_TODAY, ...SUPABASE_DEMO_MISSIONS_WEEK]
+interface SiteData {
+  id: string
+  nom: string
+  adresse: string
+  ville: string
+  code_postal: string
+  secteur: string
+  superficie: number | null
+}
+
+interface InterventionData {
+  id: string
+  type: string
+  date_prevue: string
+  notes_client: string | null
+  sites: SiteData | null
+}
+
+const SECTEUR_LABELS: Record<string, string> = {
+  restaurant: "Restaurant",
+  hotel: "Hôtel",
+  entrepot: "Entrepôt",
+  agroalimentaire: "Agroalimentaire",
+  immeuble: "Immeuble",
+  bureau: "Bureau",
+}
 
 function ProgressBar({ step }: { step: number }) {
   const steps = ["Arrivée", "Zones", "Produits", "Signature"]
@@ -30,13 +55,31 @@ export default function ArriveePage() {
   const router = useRouter()
   const missionId = params?.id as string
 
-  const mission = DEMO_MISSIONS.find((m) => m.id === missionId) ?? DEMO_MISSIONS[0]
-
+  const [intervention, setIntervention] = useState<InterventionData | null>(null)
+  const [fetchLoading, setFetchLoading] = useState(true)
   const [time, setTime] = useState(
     new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
   )
   const [loading, setLoading] = useState(false)
 
+  // Fetch intervention + site from Supabase
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    supabase
+      .from("interventions")
+      .select("id, type, date_prevue, notes_client, sites(id, nom, adresse, ville, code_postal, secteur, superficie)")
+      .eq("id", missionId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setIntervention(data as InterventionData | null)
+        setFetchLoading(false)
+      })
+  }, [missionId])
+
+  // Live clock
   useEffect(() => {
     const interval = setInterval(() => {
       setTime(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
@@ -46,33 +89,40 @@ export default function ArriveePage() {
 
   async function handleArrivee() {
     setLoading(true)
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true"
-
-    if (!isDemoMode) {
-      try {
-        const { createClient } = await import("@supabase/supabase-js")
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-        await supabase
-          .from("interventions")
-          .update({ statut: "en_cours", heure_arrivee: new Date().toISOString() })
-          .eq("id", missionId)
-      } catch {
-        // Proceed anyway
-      }
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      await supabase
+        .from("interventions")
+        .update({ statut: "en_cours", heure_arrivee: new Date().toISOString() })
+        .eq("id", missionId)
+    } catch {
+      // Proceed anyway — arrivée saved locally
     }
 
-    // Save arrival time for recap
     if (typeof window !== "undefined") {
       localStorage.setItem(`mission-${missionId}-arrivee`, new Date().toISOString())
+      // Pass sector to zones page for pre-check
+      if (intervention?.sites?.secteur) {
+        localStorage.setItem(`mission-${missionId}-secteur`, intervention.sites.secteur)
+      }
     }
 
     router.push(`/technicien/mission/${missionId}/zones`)
   }
 
-  const site = mission?.sites
+  const site = intervention?.sites
+
+  if (fetchLoading) {
+    return (
+      <div style={{ maxWidth: "480px", margin: "0 auto", padding: "80px 20px", textAlign: "center" }}>
+        <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "4px solid #F5F0E8", borderTopColor: "#1B3A2D", margin: "0 auto", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
 
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", padding: "24px 20px 64px" }}>
@@ -102,7 +152,7 @@ export default function ArriveePage() {
         borderRadius: "16px",
         padding: "32px 28px",
         boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-        marginBottom: "24px",
+        marginBottom: "20px",
         textAlign: "center",
       }}>
         <div style={{
@@ -123,9 +173,34 @@ export default function ArriveePage() {
             <p style={{ fontSize: "16px", fontWeight: 600, color: "#1B3A2D", margin: "0 0 4px" }}>
               {site.nom}
             </p>
-            <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
-              {site.adresse} — {site.ville} {site.code_postal}
+            <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 8px" }}>
+              {site.adresse}{site.ville ? ` — ${site.ville}` : ""}{site.code_postal ? ` ${site.code_postal}` : ""}
             </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+              {site.secteur && (
+                <span style={{ padding: "3px 10px", borderRadius: "20px", background: "#F5F0E8", color: "#1B3A2D", fontSize: "12px", fontWeight: 500 }}>
+                  {SECTEUR_LABELS[site.secteur] ?? site.secteur}
+                </span>
+              )}
+              {site.superficie && (
+                <span style={{ padding: "3px 10px", borderRadius: "20px", background: "#F5F0E8", color: "#1B3A2D", fontSize: "12px", fontWeight: 500 }}>
+                  {site.superficie} m²
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Date prévue */}
+        {intervention?.date_prevue && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+            marginBottom: "16px",
+          }}>
+            <Clock size={14} color="#9CA3AF" />
+            <span style={{ fontSize: "13px", color: "#6B7280" }}>
+              Prévue le {new Date(intervention.date_prevue).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </span>
           </div>
         )}
 
@@ -142,6 +217,24 @@ export default function ArriveePage() {
           </p>
         </div>
       </div>
+
+      {/* Notes client */}
+      {intervention?.notes_client && (
+        <div style={{
+          background: "#FFF7ED",
+          border: "1px solid #FDE68A",
+          borderRadius: "10px",
+          padding: "12px 16px",
+          marginBottom: "20px",
+        }}>
+          <p style={{ fontSize: "11px", color: "#92400E", fontWeight: 700, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Notes client
+          </p>
+          <p style={{ fontSize: "13px", color: "#78350F", margin: 0, fontStyle: "italic" }}>
+            {intervention.notes_client}
+          </p>
+        </div>
+      )}
 
       {/* CTA Button */}
       <button

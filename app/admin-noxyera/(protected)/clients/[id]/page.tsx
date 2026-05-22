@@ -1,70 +1,99 @@
-import { createClient } from '@supabase/supabase-js'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+type Profile = {
+  id: string
+  full_name: string | null
+  email: string | null
+  telephone: string | null
+  entreprise: string | null
+  created_at: string
+}
 
-  const { data: client } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+type ClientData = {
+  client: Profile
+  interventions: Record<string, unknown>[]
+  audits: Record<string, unknown>[]
+}
 
-  if (!client) notFound()
+const cardStyle = {
+  background: "#122B1E",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "16px",
+  marginBottom: "20px",
+}
 
-  const [{ data: interventions }, { data: audits }] = await Promise.all([
-    supabase
-      .from('interventions')
-      .select('*')
-      .eq('technicien_id', params.id)
-      .order('created_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('audits')
-      .select('*')
-      .eq('email', client.email ?? '')
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ])
+const headerStyle = {
+  padding: "16px 20px",
+  borderBottom: "1px solid rgba(255,255,255,0.07)",
+}
 
-  const cardStyle = {
-    background: "#122B1E",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: "16px",
-    marginBottom: "20px",
+const thStyle: React.CSSProperties = {
+  padding: "10px 20px",
+  textAlign: "left" as const,
+  fontSize: "11px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+  color: "rgba(255,255,255,0.3)",
+  fontFamily: "monospace",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: "12px 20px",
+  fontSize: "13px",
+  color: "rgba(255,255,255,0.75)",
+  borderBottom: "1px solid rgba(255,255,255,0.04)",
+}
+
+export default function ClientDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const [data, setData] = useState<ClientData | null>(null)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/admin/clients/${id}`)
+      .then(r => {
+        if (r.status === 404) { setNotFound(true); return null }
+        return r.json() as Promise<ClientData>
+      })
+      .then(d => { if (d) setData(d) })
+      .catch(() => {})
+  }, [id])
+
+  if (notFound) {
+    return (
+      <div className="p-5 min-h-screen flex items-center justify-center" style={{ background: "#0D1F17" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.5)", marginBottom: "16px" }}>Client introuvable</p>
+          <Link href="/admin-noxyera/clients"
+            style={{ color: "#F26522", fontWeight: 600, fontSize: "14px", textDecoration: "none" }}>
+            ← Retour aux clients
+          </Link>
+        </div>
+      </div>
+    )
   }
 
-  const headerStyle = {
-    padding: "16px 20px",
-    borderBottom: "1px solid rgba(255,255,255,0.07)",
+  if (!data) {
+    return (
+      <div className="p-5 min-h-screen" style={{ background: "#0D1F17" }}>
+        <div style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px", padding: "40px 0", textAlign: "center" }}>
+          Chargement…
+        </div>
+      </div>
+    )
   }
 
-  const thStyle: React.CSSProperties = {
-    padding: "10px 20px",
-    textAlign: "left" as const,
-    fontSize: "11px",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    color: "rgba(255,255,255,0.3)",
-    fontFamily: "monospace",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  }
-
-  const tdStyle: React.CSSProperties = {
-    padding: "12px 20px",
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.75)",
-    borderBottom: "1px solid rgba(255,255,255,0.04)",
-  }
+  const { client, interventions, audits } = data
 
   return (
     <div className="p-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -122,10 +151,10 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       <div style={cardStyle}>
         <div style={headerStyle}>
           <h2 style={{ fontSize: "14px", fontWeight: 600, color: "white", margin: 0 }}>
-            Audits ({(audits ?? []).length})
+            Audits ({audits.length})
           </h2>
         </div>
-        {(audits ?? []).length === 0 ? (
+        {audits.length === 0 ? (
           <p style={{ padding: "24px 20px", fontSize: "13px", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
             Aucun audit
           </p>
@@ -140,7 +169,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               </tr>
             </thead>
             <tbody>
-              {(audits ?? []).map((a: Record<string, unknown>) => (
+              {audits.map((a) => (
                 <tr key={a.id as string}>
                   <td style={tdStyle}>{(a.nom_etablissement as string) ?? '—'}</td>
                   <td style={tdStyle}>{(a.adresse as string) ?? '—'}</td>
@@ -166,10 +195,10 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       <div style={cardStyle}>
         <div style={headerStyle}>
           <h2 style={{ fontSize: "14px", fontWeight: 600, color: "white", margin: 0 }}>
-            Interventions ({(interventions ?? []).length})
+            Interventions ({interventions.length})
           </h2>
         </div>
-        {(interventions ?? []).length === 0 ? (
+        {interventions.length === 0 ? (
           <p style={{ padding: "24px 20px", fontSize: "13px", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
             Aucune intervention enregistrée
           </p>
@@ -183,7 +212,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               </tr>
             </thead>
             <tbody>
-              {(interventions ?? []).map((iv: Record<string, unknown>) => (
+              {interventions.map((iv) => (
                 <tr key={iv.id as string}>
                   <td style={tdStyle}>{(iv.type as string) ?? '—'}</td>
                   <td style={tdStyle}>{(iv.statut as string) ?? '—'}</td>

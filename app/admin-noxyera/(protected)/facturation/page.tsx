@@ -1,48 +1,56 @@
-import { createClient } from '@supabase/supabase-js'
+'use client'
+
+import { useEffect, useState } from 'react'
+
+type Client = {
+  id: string
+  full_name: string | null
+  email: string | null
+  entreprise: string | null
+  created_at: string
+}
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default async function FacturationPage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+const cardStyle = {
+  background: "#122B1E",
+  border: "1px solid rgba(255,255,255,0.07)",
+  borderRadius: "16px",
+}
 
-  const { data: clients } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, entreprise, created_at')
-    .eq('role', 'client')
-    .order('created_at', { ascending: false })
+const thStyle: React.CSSProperties = {
+  padding: "10px 20px",
+  textAlign: "left" as const,
+  fontSize: "11px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+  color: "rgba(255,255,255,0.3)",
+  fontFamily: "monospace",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
+}
 
-  const clientsCount = clients?.length ?? 0
+const tdStyle: React.CSSProperties = {
+  padding: "12px 20px",
+  fontSize: "13px",
+  color: "rgba(255,255,255,0.75)",
+  borderBottom: "1px solid rgba(255,255,255,0.04)",
+}
+
+export default function FacturationPage() {
+  const [clients, setClients] = useState<Client[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/facturation')
+      .then(r => r.json())
+      .then((data: Client[]) => setClients(data))
+      .catch(() => {})
+  }, [])
+
+  const clientsCount = clients.length
   const mrrEstime = clientsCount * 150
   const arrEstime = clientsCount * 1800
-
-  const cardStyle = {
-    background: "#122B1E",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: "16px",
-  }
-
-  const thStyle: React.CSSProperties = {
-    padding: "10px 20px",
-    textAlign: "left" as const,
-    fontSize: "11px",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    color: "rgba(255,255,255,0.3)",
-    fontFamily: "monospace",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  }
-
-  const tdStyle: React.CSSProperties = {
-    padding: "12px 20px",
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.75)",
-    borderBottom: "1px solid rgba(255,255,255,0.04)",
-  }
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -116,7 +124,7 @@ export default async function FacturationPage() {
               </tr>
             </thead>
             <tbody>
-              {(clients ?? []).map(client => (
+              {clients.map(client => (
                 <tr key={client.id}>
                   <td style={tdStyle}>{client.full_name ?? '—'}</td>
                   <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "12px" }}>{client.email ?? '—'}</td>

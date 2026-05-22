@@ -83,6 +83,12 @@ export default function AdminCandidaturesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("tous");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  function showToast(message: string, type: "success" | "error" = "success") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     async function load() {
@@ -125,9 +131,15 @@ export default function AdminCandidaturesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ candidatureId: c.id, email: c.email, prenom: c.prenom, nom: c.nom }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setCandidatures(prev => prev.map(x => x.id === c.id ? { ...x, statut: "accepté" } : x));
+        showToast(`Invitation envoyée à ${c.prenom} ${c.nom}`, "success");
+      } else {
+        showToast(data.error ?? "Erreur lors de la validation", "error");
       }
+    } catch {
+      showToast("Erreur réseau", "error");
     } finally {
       setActionLoading(null);
     }
@@ -145,6 +157,22 @@ export default function AdminCandidaturesPage() {
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 9999,
+          background: toast.type === "success" ? "#10B981" : "#EF4444",
+          color: "white", padding: "12px 20px", borderRadius: 12,
+          fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "center", gap: 8,
+          animation: "slideIn 0.2s ease",
+        }}>
+          {toast.type === "success" ? <Check size={15} /> : <X size={15} />}
+          {toast.message}
+        </div>
+      )}
+      <style>{`@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>

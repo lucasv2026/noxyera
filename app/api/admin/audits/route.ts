@@ -15,7 +15,7 @@ export async function GET() {
 
   const [auditsRes, techRes] = await Promise.all([
     supabase.from("audits").select("*").order("created_at", { ascending: false }),
-    supabase.from("profiles").select("id, prenom, nom, email").eq("role", "technicien"),
+    supabase.from("profiles").select("id, prenom, nom, email, ville, disponibilite, certifications").eq("role", "technicien"),
   ]);
 
   if (auditsRes.error) console.error("AUDITS FETCH ERROR:", JSON.stringify(auditsRes.error));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Loader2, MapPin, User, Calendar, Check, ChevronDown } from "lucide-react";
+import { Search, Loader2, MapPin, User, Calendar, Check, ChevronDown, Send, X } from "lucide-react";
 
 type AuditStatut = "nouveau" | "technicien assigné" | "audit planifié" | "devis envoyé" | "signé";
 
@@ -28,12 +28,21 @@ interface Audit {
   notes_internes: string | null;
 }
 
-interface Technicien { id: string; prenom: string; nom: string; email: string }
+interface Technicien {
+  id: string
+  prenom: string
+  nom: string
+  email: string
+  ville: string | null
+  disponibilite: string | null
+  certifications: string[] | null
+}
 
 const STATUT_CFG: Record<string, { label: string; color: string; bg: string }> = {
   "nouveau":            { label: "Nouveau",            color: "#94A3B8", bg: "rgba(148,163,184,0.15)" },
   "technicien assigné": { label: "Tech. assigné",      color: "#F59E0B", bg: "rgba(245,158,11,0.15)" },
   "audit planifié":     { label: "Planifié",           color: "#60A5FA", bg: "rgba(96,165,250,0.15)" },
+  "proposé":            { label: "Proposé",            color: "#F26522", bg: "rgba(242,101,34,0.15)" },
   "devis envoyé":       { label: "Devis envoyé",       color: "#A78BFA", bg: "rgba(167,139,250,0.15)" },
   "signé":              { label: "Signé ✓",            color: "#10B981", bg: "rgba(16,185,129,0.15)" },
 };
@@ -70,6 +79,144 @@ const DEMO_AUDITS: Audit[] = [
   },
 ];
 
+// ── Proposer Mission Panel ──────────────────────────────────────────────────
+function ProposerMissionPanel({
+  audit,
+  techniciens,
+  onClose,
+  onSuccess,
+}: {
+  audit: Audit
+  techniciens: Technicien[]
+  onClose: () => void
+  onSuccess: (prenom: string) => void
+}) {
+  const [selected, setSelected] = useState<string>("")
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+
+  async function handleProposer() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/audits/${audit.id}/proposer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicienId: selected }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) throw new Error(data.error ?? "Erreur")
+      onSuccess(data.prenomTech ?? "le technicien")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const DISPO_LABELS: Record<string, string> = {
+    "temps-plein":   "Temps plein",
+    "temps-partiel": "Temps partiel",
+    "week-ends":     "Week-ends",
+    "flexible":      "Flexible",
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{ width: "100%", maxWidth: 460, borderRadius: 20, background: "#122B1E", border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "white", margin: 0 }}>Proposer une mission</h2>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>
+              {audit.nom_etablissement} · {SECTEUR_LABELS[audit.secteur] ?? audit.secteur}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={16} style={{ color: "rgba(255,255,255,0.5)" }} />
+          </button>
+        </div>
+
+        {/* Techniciens list */}
+        <div style={{ maxHeight: 320, overflowY: "auto", padding: "12px 16px" }}>
+          {techniciens.length === 0 ? (
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center", padding: "20px 0" }}>
+              Aucun technicien disponible
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {techniciens.map(tech => {
+                const isSelected = selected === tech.id
+                return (
+                  <button
+                    key={tech.id}
+                    onClick={() => setSelected(tech.id)}
+                    style={{
+                      padding: "12px 14px", borderRadius: 12, textAlign: "left", cursor: "pointer",
+                      background: isSelected ? "rgba(242,101,34,0.15)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${isSelected ? "rgba(242,101,34,0.4)" : "rgba(255,255,255,0.07)"}`,
+                      display: "flex", alignItems: "center", gap: 12,
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: isSelected ? "rgba(242,101,34,0.2)" : "rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: isSelected ? "#F26522" : "rgba(255,255,255,0.6)", flexShrink: 0 }}>
+                      {(tech.prenom?.[0] ?? "")}{(tech.nom?.[0] ?? "")}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "white", margin: 0 }}>{tech.prenom} {tech.nom}</p>
+                      <div style={{ display: "flex", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
+                        {tech.ville && (
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: 3 }}>
+                            <MapPin size={9} /> {tech.ville}
+                          </span>
+                        )}
+                        {tech.disponibilite && (
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                            {DISPO_LABELS[tech.disponibilite] ?? tech.disponibilite}
+                          </span>
+                        )}
+                        {(tech.certifications ?? []).map(c => (
+                          <span key={c} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "rgba(96,165,250,0.12)", color: "#60A5FA" }}>{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {isSelected && <Check size={14} style={{ color: "#F26522", flexShrink: 0 }} />}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "12px 16px 16px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          {error && (
+            <p style={{ fontSize: 12, color: "#FCA5A5", marginBottom: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "8px 12px" }}>
+              {error}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: "10px", borderRadius: 12, background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
+              Annuler
+            </button>
+            <button
+              onClick={handleProposer}
+              disabled={!selected || loading}
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", borderRadius: 12, background: !selected ? "rgba(255,255,255,0.07)" : "#F26522", color: !selected ? "rgba(255,255,255,0.3)" : "white", border: "none", cursor: !selected || loading ? "default" : "pointer", fontSize: 13, fontWeight: 600, opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              {loading ? "Envoi…" : "Proposer à ce technicien"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function relDate(iso: string) {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   if (d === 0) return "aujourd'hui";
@@ -85,6 +232,12 @@ export default function AdminAuditsPage() {
   const [search, setSearch]           = useState("");
   const [saving, setSaving]           = useState<string | null>(null);
   const [toast, setToast]             = useState<string | null>(null);
+  const [proposerTarget, setProposerTarget] = useState<Audit | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   // Inline edit state per audit
   const [edits, setEdits] = useState<Record<string, { technicien_id?: string; date?: string; notes?: string }>>({});
@@ -139,8 +292,7 @@ export default function AdminAuditsPage() {
         notes_internes:    edit.notes ?? a.notes_internes,
       } : a));
       const msg = date ? "Audit planifié · Emails envoyés au client et au technicien ✓" : "Technicien assigné ✓";
-      setToast(msg);
-      setTimeout(() => setToast(null), 4000);
+      showToast(msg);
     } finally {
       setSaving(null);
     }
@@ -163,6 +315,20 @@ export default function AdminAuditsPage() {
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
+      {/* Proposer Mission Panel */}
+      {proposerTarget && (
+        <ProposerMissionPanel
+          audit={proposerTarget}
+          techniciens={techniciens}
+          onClose={() => setProposerTarget(null)}
+          onSuccess={(prenom) => {
+            setAudits(prev => prev.map(a => a.id === proposerTarget.id ? { ...a, statut: "proposé" as AuditStatut } : a));
+            setProposerTarget(null);
+            showToast(`Offre envoyée à ${prenom} ✓`);
+          }}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div style={{
@@ -330,6 +496,16 @@ export default function AdminAuditsPage() {
                       </select>
                       <ChevronDown size={12} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: statut.color, pointerEvents: "none" }} />
                     </div>
+
+                    {/* Proposer une mission — visible si audit planifié */}
+                    {audit.statut === "audit planifié" && (
+                      <button
+                        onClick={() => setProposerTarget(audit)}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "rgba(242,101,34,0.15)", color: "#F26522", border: "1px solid rgba(242,101,34,0.3)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}
+                      >
+                        <Send size={12} /> Proposer une mission
+                      </button>
+                    )}
 
                     {assignedTech && (
                       <span style={{ fontSize: 11, color: "#10B981", display: "flex", alignItems: "center", gap: 4 }}>
