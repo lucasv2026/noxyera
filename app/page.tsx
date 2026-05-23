@@ -294,9 +294,8 @@ function PlatformSection() {
           <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#0d1f17", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
               <span className="text-sm font-semibold text-white">Dashboard — Brasserie Voltaire</span>
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: "#10b981" }}>
-                <span className="h-2 w-2 rounded-full animate-pulse" style={{ background: "#10b981" }} />
-                Conforme
+              <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Conforme ✓
               </span>
             </div>
             <div className="p-5 space-y-3">

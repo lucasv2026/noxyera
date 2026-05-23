@@ -48,9 +48,9 @@ export function AdminSidebar({ adminName, adminEmail, initials }: AdminSidebarPr
 
       {/* Status */}
       <div className="mx-4 my-3 flex items-center gap-2 px-3 py-2 rounded-xl"
-        style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-        <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#10B981' }} />
-        <span className="text-xs font-medium" style={{ color: '#10B981', fontFamily: 'monospace' }}>
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <span className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
+        <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
           Opérationnel
         </span>
       </div>
@@ -63,13 +63,16 @@ export function AdminSidebar({ adminName, adminEmail, initials }: AdminSidebarPr
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-white/8"
+              className="flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-all"
               style={{
-                color: active ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.55)',
-                background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                background: active ? 'rgba(242,101,34,0.18)' : 'transparent',
+                paddingLeft: active ? '10px' : '12px',
+                paddingRight: '12px',
+                borderLeft: active ? '3px solid #F26522' : '3px solid transparent',
               }}
             >
-              <Icon size={15} />
+              <Icon size={15} style={{ color: active ? '#F26522' : 'inherit' }} />
               {label}
             </Link>
           )

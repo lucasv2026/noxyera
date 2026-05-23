@@ -1,18 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck } from "lucide-react";
-
-const NAV = [
-  { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
-  { label: "File d'attente", href: "/admin/queue", icon: ClipboardList },
-  { label: "Clients CRM", href: "/admin/clients", icon: Users },
-  { label: "Audits", href: "/admin/audits", icon: SearchCheck },
-  { label: "Planning", href: "/admin/planning", icon: Calendar },
-  { label: "Facturation", href: "/admin/facturation", icon: TrendingUp },
-  { label: "Candidatures", href: "/admin/candidatures", icon: Wrench },
-  { label: "Leads", href: "/admin/leads", icon: Target },
-];
+import { Shield, LogOut } from "lucide-react";
+import { AdminNavLinks } from "./AdminNavLinks";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies()
@@ -43,29 +33,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        {/* Live indicator */}
+        {/* Status */}
         <div className="mx-4 my-3 flex items-center gap-2 px-3 py-2 rounded-xl"
-          style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#10B981" }} />
-          <span className="text-xs font-medium" style={{ color: "#10B981", fontFamily: "monospace" }}>
-            En direct
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+          <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>
+            Opérationnel
           </span>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5">
-          {NAV.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-white/8"
-              style={{ color: "rgba(255,255,255,0.65)" }}
-            >
-              <Icon size={15} />
-              {label}
-            </Link>
-          ))}
-        </nav>
+        {/* Nav — active state géré côté client via AdminNavLinks */}
+        <AdminNavLinks />
 
         {/* Footer */}
         <div className="px-3 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
