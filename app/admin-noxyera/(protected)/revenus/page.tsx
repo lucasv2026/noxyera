@@ -1,10 +1,19 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { TrendingUp, Users, AlertTriangle, Euro } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { ADMIN_METRICS, ADMIN_TOP_CLIENTS, DEMO_CLIENTS, DEMO_FACTURES } from "@/lib/demo-data";
+
+type Client = {
+  id: string;
+  prenom: string | null;
+  nom: string | null;
+  entreprise: string | null;
+  email: string | null;
+  created_at: string;
+};
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -41,23 +50,24 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 export default function RevenusPage() {
-  const arr = DEMO_CLIENTS.reduce((acc, c) => acc + c.prixAnnuel, 0);
-  const mrr = Math.round(arr / 12);
-  const clientsActifs = DEMO_CLIENTS.length;
-  const churnRisk = DEMO_CLIENTS.filter(c => c.statut === "a_planifier").length;
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const facturesEnAttente = DEMO_FACTURES.filter(f => f.statut !== "payee");
+  useEffect(() => {
+    fetch("/api/admin/facturation")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setClients(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-  function getClientNom(clientId: string): string {
-    return DEMO_CLIENTS.find(c => c.id === clientId)?.nom ?? clientId;
-  }
-
-  const churnColor = (level: "low" | "medium" | "high") =>
-    level === "high" ? "#DC2626" : level === "medium" ? "#F59E0B" : "#10B981";
-  const churnLabel = (level: "low" | "medium" | "high") =>
-    level === "high" ? "Élevé" : level === "medium" ? "Moyen" : "Faible";
-  const churnBg = (level: "low" | "medium" | "high") =>
-    level === "high" ? "rgba(220,38,38,0.15)" : level === "medium" ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.15)";
+  const clientsActifs = clients.length;
+  const arr = 0;
+  const mrr = 0;
+  const churnRisk = 0;
+  const facturesEnAttente: never[] = [];
+  const monthlyRevenue: { month: string; revenue: number }[] = [];
+  const topClients: never[] = [];
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
@@ -70,9 +80,9 @@ export default function RevenusPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium"
-          style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#10B981", fontFamily: "monospace" }}>
+          style={{ background: "rgba(148,163,184,0.1)", border: "1px solid rgba(148,163,184,0.2)", color: "rgba(148,163,184,0.6)", fontFamily: "monospace" }}>
           <TrendingUp size={12} />
-          +23% vs N-1
+          Non configuré
         </div>
       </div>
 
@@ -81,28 +91,28 @@ export default function RevenusPage() {
         {[
           {
             label: "ARR total",
-            value: formatEur(arr),
+            value: loading ? "…" : formatEur(arr),
             icon: TrendingUp,
             color: "#10B981",
             sub: "Revenu annuel récurrent",
           },
           {
             label: "MRR",
-            value: formatEur(mrr),
+            value: loading ? "…" : formatEur(mrr),
             icon: Euro,
             color: "#60A5FA",
             sub: "Revenu mensuel récurrent",
           },
           {
             label: "Clients actifs",
-            value: clientsActifs,
+            value: loading ? "…" : clientsActifs,
             icon: Users,
             color: "#A78BFA",
-            sub: `${DEMO_CLIENTS.filter(c => c.formule === "serenite").length} Sérénité · ${DEMO_CLIENTS.filter(c => c.formule === "essentiel").length} Essentiel`,
+            sub: "Comptes créés",
           },
           {
             label: "Risque churn",
-            value: churnRisk,
+            value: loading ? "…" : churnRisk,
             icon: AlertTriangle,
             color: "#F59E0B",
             sub: "Clients à planifier",
@@ -135,26 +145,32 @@ export default function RevenusPage() {
           }
         />
         <div className="px-5 py-5" style={{ height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={ADMIN_METRICS.monthlyRevenue} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`}
-                tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}
-                axisLine={false}
-                tickLine={false}
-                width={48}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-              <Bar dataKey="revenue" fill="#4ade80" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {monthlyRevenue.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Aucune donnée de revenu disponible
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyRevenue} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`}
+                  tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={48}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                <Bar dataKey="revenue" fill="#4ade80" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </Card>
 
@@ -163,36 +179,14 @@ export default function RevenusPage() {
         {/* Top clients */}
         <Card>
           <CardHeader title="Top clients par ARR" />
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-            {[...ADMIN_TOP_CLIENTS].sort((a, b) => b.arr - a.arr).map((client, i) => (
-              <div key={client.name} className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/3 transition-colors">
-                <span className="text-xs w-5 shrink-0 font-bold" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>
-                  #{i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{client.name}</p>
-                </div>
-                <span className="text-sm font-bold text-white shrink-0" style={{ fontFamily: "monospace" }}>
-                  {client.arr.toLocaleString("fr-FR")} €
-                </span>
-                <span
-                  className="px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
-                  style={{ background: churnBg(client.churn), color: churnColor(client.churn) }}
-                >
-                  {churnLabel(client.churn)}
-                </span>
-                <span
-                  className="text-xs font-semibold shrink-0"
-                  style={{
-                    color: client.trend.startsWith("+") ? "#10B981" : "#DC2626",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {client.trend}
-                </span>
-              </div>
-            ))}
-          </div>
+          {topClients.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Aucun contrat renseigné
+            </div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+            </div>
+          )}
           <div className="px-5 py-2.5 text-xs" style={{ color: "rgba(255,255,255,0.25)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
             Risque churn: Faible · Moyen · Élevé
           </div>
@@ -204,55 +198,16 @@ export default function RevenusPage() {
             title="Factures en attente"
             right={
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>
-                {facturesEnAttente.length} facture{facturesEnAttente.length > 1 ? "s" : ""}
+                style={{ background: "rgba(148,163,184,0.1)", color: "rgba(148,163,184,0.6)" }}>
+                0 facture
               </span>
             }
           />
           <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-            {facturesEnAttente.length === 0 && (
-              <div className="px-5 py-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
-                Aucune facture en attente
-              </div>
-            )}
-            {facturesEnAttente.map(f => (
-              <div key={f.id} className="flex items-center gap-3 px-5 py-4 hover:bg-white/3 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white" style={{ fontFamily: "monospace" }}>
-                    {f.reference}
-                  </p>
-                  <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    {getClientNom(f.clientId)}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "monospace" }}>
-                    {new Date(f.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
-                </div>
-                <p className="text-sm font-bold text-white shrink-0" style={{ fontFamily: "monospace" }}>
-                  {f.montant.toLocaleString("fr-FR")} €
-                </p>
-                <span
-                  className="px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
-                  style={{
-                    background: f.statut === "en_retard" ? "rgba(220,38,38,0.15)" : "rgba(245,158,11,0.15)",
-                    color: f.statut === "en_retard" ? "#DC2626" : "#F59E0B",
-                  }}
-                >
-                  {f.statut === "en_retard" ? "En retard" : "En attente"}
-                </span>
-              </div>
-            ))}
-          </div>
-          {facturesEnAttente.length > 0 && (
-            <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                Total en attente :{" "}
-                <span className="font-bold text-white">
-                  {formatEur(facturesEnAttente.reduce((acc, f) => acc + f.montant, 0))}
-                </span>
-              </p>
+            <div className="px-5 py-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Aucune facture en attente
             </div>
-          )}
+          </div>
         </Card>
       </div>
     </div>

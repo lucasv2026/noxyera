@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Users, Clock, CheckCircle2, X, UserCheck, MapPin, AlertTriangle, RefreshCw } from "lucide-react";
-import { DEMO_INTERVENTIONS, ADMIN_TECHNICIENS as DEMO_TECHNICIENS, DEMO_CLIENTS } from "@/lib/demo-data";
-import type { TypeIntervention, StatutIntervention } from "@/lib/demo-data";
+type TypeIntervention = "preventif" | "curatif" | "urgence" | "audit";
+type StatutIntervention = "proposee" | "planifie" | "planifiee" | "en_cours" | "realise" | "expire" | "annule";
+
+interface Technicien {
+  id: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  ville: string | null;
+  disponibilite: string | null;
+  certifications: string[] | null;
+}
 
 // ── Types pour les données réelles ───────────────────────────────────────────
 interface TodayIntervention {
@@ -229,16 +239,17 @@ function TypeBadge({ type }: { type: TypeIntervention }) {
 function AssignModal({
   intervention,
   allInterventions,
+  techniciens,
   onClose,
   onAssign,
 }: {
   intervention: InterventionWithTech;
   allInterventions: InterventionWithTech[];
+  techniciens: Technicien[];
   onClose: () => void;
   onAssign: (techId: string) => void;
 }) {
-  const client = DEMO_CLIENTS.find(c => c.id === intervention.clientId);
-  const currentTech = DEMO_TECHNICIENS.find(t => t.id === intervention.technicienId);
+  const currentTech = techniciens.find(t => t.id === intervention.technicienId);
   const [selected, setSelected] = useState(intervention.technicienId ?? "");
 
   return (
@@ -249,7 +260,7 @@ function AssignModal({
           <div>
             <p className="text-sm font-bold text-white">Assigner un technicien</p>
             <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-              {client?.nom ?? intervention.clientId} · {new Date(intervention.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+              {new Date(intervention.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
             </p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors">
@@ -260,12 +271,11 @@ function AssignModal({
         {/* Infos intervention */}
         <div className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <TypeBadge type={intervention.type} />
-          {currentTech && (
+          {currentTech ? (
             <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Actuellement : {currentTech.nom}
+              Actuellement : {currentTech.prenom} {currentTech.nom}
             </span>
-          )}
-          {!currentTech && (
+          ) : (
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>
               Non assigné
             </span>
@@ -274,7 +284,11 @@ function AssignModal({
 
         {/* Liste techniciens */}
         <div className="p-5 space-y-2 max-h-72 overflow-y-auto">
-          {DEMO_TECHNICIENS.filter(t => t.statut === "actif").map(tech => {
+          {techniciens.length === 0 ? (
+            <p className="text-sm text-center py-4" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Aucun technicien disponible
+            </p>
+          ) : techniciens.map(tech => {
             const isSelected = selected === tech.id;
             const missionsJour = allInterventions.filter(
               i => i.technicienId === tech.id && sameDay(new Date(i.date), new Date(intervention.date))
@@ -298,13 +312,15 @@ function AssignModal({
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0"
                   style={{ background: isSelected ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.07)", color: isSelected ? "#10B981" : "rgba(255,255,255,0.7)" }}
                 >
-                  {tech.nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                  {(tech.prenom?.[0] ?? "")}{(tech.nom?.[0] ?? "")}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">{tech.nom}</p>
-                  <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    <MapPin size={9} /> {tech.region}
-                  </p>
+                  <p className="text-sm font-semibold text-white">{tech.prenom} {tech.nom}</p>
+                  {tech.ville && (
+                    <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      <MapPin size={9} /> {tech.ville}
+                    </p>
+                  )}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-xs font-semibold" style={{ color: busy ? "#DC2626" : missionsJour > 0 ? "#F59E0B" : "#10B981" }}>
@@ -343,27 +359,19 @@ function AssignModal({
   );
 }
 
-// Mapper nom technicien → id
-function nomToTechId(nom: string | null): string | null {
-  if (!nom) return null;
-  const found = DEMO_TECHNICIENS.find(t => t.nom === nom);
-  return found?.id ?? null;
-}
-
 // ── Page principale ───────────────────────────────────────────────────────
 export default function PlanningPage() {
   const [weekRef, setWeekRef] = useState(new Date());
-  const [interventions, setInterventions] = useState<InterventionWithTech[]>(
-    DEMO_INTERVENTIONS.map(i => ({
-      id: i.id,
-      clientId: i.clientId,
-      date: i.datePrevue,
-      type: i.type,
-      statut: i.statut as StatutIntervention,
-      technicienId: nomToTechId(i.technicienNom),
-    }))
-  );
+  const [interventions, setInterventions] = useState<InterventionWithTech[]>([]);
+  const [techniciens, setTechniciens] = useState<Technicien[]>([]);
   const [assignTarget, setAssignTarget] = useState<InterventionWithTech | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/audits")
+      .then(r => r.ok ? r.json() : { techniciens: [] })
+      .then(data => setTechniciens(data.techniciens ?? []))
+      .catch(() => {});
+  }, []);
 
   const today = new Date();
   const weekDays = getWeekDays(weekRef);
@@ -411,7 +419,7 @@ export default function PlanningPage() {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Cette semaine", value: interventions.filter(i => { const d = new Date(i.date); return weekDays.some(w => sameDay(d, w)); }).length, color: "#10B981", icon: Calendar },
-          { label: "Techniciens dispo", value: DEMO_TECHNICIENS.filter(t => t.statut === "actif").length, color: "#60A5FA", icon: Users },
+          { label: "Techniciens dispo", value: techniciens.length, color: "#60A5FA", icon: Users },
           { label: "Non assignées", value: nonAssignees.length, color: nonAssignees.length > 0 ? "#F59E0B" : "#10B981", icon: Clock },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="rounded-2xl p-4" style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -475,8 +483,7 @@ export default function PlanningPage() {
                 {/* Interventions du jour */}
                 <div className="space-y-1">
                   {dayInterventions.map(inter => {
-                    const client = DEMO_CLIENTS.find(c => c.id === inter.clientId);
-                    const tech = DEMO_TECHNICIENS.find(t => t.id === inter.technicienId);
+                    const tech = techniciens.find(t => t.id === inter.technicienId);
                     const isUnassigned = !inter.technicienId;
 
                     return (
@@ -490,11 +497,11 @@ export default function PlanningPage() {
                         }}
                       >
                         <p className="font-semibold truncate" style={{ color: isUnassigned ? "#F59E0B" : "#10B981" }}>
-                          {client?.nom?.split(" ").slice(-1)[0] ?? "Client"}
+                          {inter.type}
                         </p>
                         {tech && (
                           <p className="truncate mt-0.5" style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>
-                            {tech.nom.split(" ")[0]}
+                            {tech.prenom}
                           </p>
                         )}
                         {isUnassigned && (
@@ -520,27 +527,24 @@ export default function PlanningPage() {
             </span>
           </div>
           <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            {nonAssignees.map(inter => {
-              const client = DEMO_CLIENTS.find(c => c.id === inter.clientId);
-              return (
-                <div key={inter.id} className="flex items-center gap-3 px-5 py-3.5">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white">{client?.nom ?? inter.clientId}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
-                      {new Date(inter.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-                    </p>
-                  </div>
-                  <TypeBadge type={inter.type} />
-                  <button
-                    onClick={() => setAssignTarget(inter)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ background: "#F26522" }}
-                  >
-                    <UserCheck size={11} /> Assigner
-                  </button>
+            {nonAssignees.map(inter => (
+              <div key={inter.id} className="flex items-center gap-3 px-5 py-3.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white capitalize">{inter.type}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
+                    {new Date(inter.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
                 </div>
-              );
-            })}
+                <TypeBadge type={inter.type} />
+                <button
+                  onClick={() => setAssignTarget(inter)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ background: "#F26522" }}
+                >
+                  <UserCheck size={11} /> Assigner
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -551,7 +555,11 @@ export default function PlanningPage() {
           <h3 className="font-semibold text-sm text-white">Charge techniciens — semaine</h3>
         </div>
         <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          {DEMO_TECHNICIENS.filter(t => t.statut === "actif").map(tech => {
+          {techniciens.length === 0 ? (
+            <div className="px-5 py-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Aucun technicien actif
+            </div>
+          ) : techniciens.map(tech => {
             const weekCount = interventions.filter(i =>
               i.technicienId === tech.id && weekDays.some(d => sameDay(d, new Date(i.date)))
             ).length;
@@ -560,11 +568,11 @@ export default function PlanningPage() {
               <div key={tech.id} className="flex items-center gap-4 px-5 py-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
                   style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)" }}>
-                  {tech.nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                  {(tech.prenom?.[0] ?? "")}{(tech.nom?.[0] ?? "")}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-semibold text-white">{tech.nom}</p>
+                    <p className="text-xs font-semibold text-white">{tech.prenom} {tech.nom}</p>
                     <p className="text-xs font-bold" style={{ color: weekCount >= 5 ? "#DC2626" : weekCount >= 3 ? "#F59E0B" : "#10B981", fontFamily: "monospace" }}>
                       {weekCount} mission{weekCount > 1 ? "s" : ""}
                     </p>
@@ -576,7 +584,7 @@ export default function PlanningPage() {
                     }} />
                   </div>
                 </div>
-                <span className="text-xs shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{tech.region}</span>
+                <span className="text-xs shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{tech.ville ?? "—"}</span>
               </div>
             );
           })}
@@ -588,6 +596,7 @@ export default function PlanningPage() {
         <AssignModal
           intervention={assignTarget}
           allInterventions={interventions}
+          techniciens={techniciens}
           onClose={() => setAssignTarget(null)}
           onAssign={(techId) => handleAssign(assignTarget.id, techId)}
         />

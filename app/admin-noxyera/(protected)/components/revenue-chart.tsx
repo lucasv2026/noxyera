@@ -4,7 +4,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid
 } from "recharts";
-import { ADMIN_METRICS } from "@/lib/demo-data";
 
 function CustomTooltip({ active, payload, label }: {
   active?: boolean;
@@ -33,7 +32,7 @@ function CustomTooltip({ active, payload, label }: {
 export default function RevenueChart() {
   return (
     <ResponsiveContainer width="100%" height={190}>
-      <BarChart data={ADMIN_METRICS.monthlyRevenue} barSize={12} barGap={2} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+      <BarChart data={[]} barSize={12} barGap={2} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
         <XAxis
           dataKey="month"

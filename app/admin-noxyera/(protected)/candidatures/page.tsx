@@ -43,33 +43,6 @@ const DISPO_MAP: Record<string, string> = {
   "flexible":     "Flexible",
 };
 
-// Données démo pour fallback
-const DEMO_CANDIDATURES: Candidature[] = [
-  {
-    id: "c1", created_at: "2026-05-20T09:15:00Z",
-    prenom: "Julien", nom: "Maréchal", email: "julien.marechal@gmail.com",
-    telephone: "06 12 34 56 78", ville: "Lyon", code_postal: "69003",
-    experience: "3-5ans", certifications: ["certiphyto", "biocides"], vehicule: true,
-    disponibilite: "temps-plein", motivation: "Passionné par le domaine sanitaire, cherche à rejoindre une structure innovante.",
-    statut: "nouveau",
-  },
-  {
-    id: "c2", created_at: "2026-05-19T14:32:00Z",
-    prenom: "Sophie", nom: "Bertrand", email: "s.bertrand@outlook.fr",
-    telephone: "07 89 01 23 45", ville: "Paris", code_postal: "75011",
-    experience: "1-3ans", certifications: ["haccp"], vehicule: false,
-    disponibilite: "temps-partiel", motivation: null,
-    statut: "contacté",
-  },
-  {
-    id: "c3", created_at: "2026-05-18T11:00:00Z",
-    prenom: "Marc", nom: "Dupuis", email: "marc.dupuis@wanadoo.fr",
-    telephone: "06 55 44 33 22", ville: "Marseille", code_postal: "13008",
-    experience: "5ans+", certifications: ["certiphyto", "haccp", "biocides"], vehicule: true,
-    disponibilite: "flexible", motivation: "10 ans d'expérience en désinsectisation industrielle.",
-    statut: "entretien",
-  },
-];
 
 function relDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -113,12 +86,23 @@ export default function AdminCandidaturesPage() {
   async function updateStatut(id: string, statut: string) {
     setActionLoading(id + statut);
     try {
-      await fetch("/api/admin/candidatures", {
+      const res = await fetch("/api/admin/candidatures", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, statut }),
       });
-      setCandidatures(prev => prev.map(c => c.id === id ? { ...c, statut } : c));
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.success !== false) {
+        setCandidatures(prev =>
+          prev.map(c => c.id === id ? { ...c, statut } : c)
+        );
+        const label = STATUT_CONFIG[statut]?.label ?? statut;
+        showToast(`Statut mis à jour : ${label}`, "success");
+      } else {
+        showToast(body.error ?? "Erreur lors de la mise à jour", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
     } finally {
       setActionLoading(null);
     }

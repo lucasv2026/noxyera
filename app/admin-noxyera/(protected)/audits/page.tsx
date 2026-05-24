@@ -55,30 +55,6 @@ const SECTEUR_LABELS: Record<string, string> = {
   immeuble: "Immeuble", bureau: "Bureau",
 };
 
-// Demo data fallback
-const DEMO_AUDITS: Audit[] = [
-  {
-    id: "a1", created_at: "2026-05-21T09:30:00Z",
-    nom_etablissement: "Brasserie du Marché", adresse: "12 place du Marché, 69001 Lyon",
-    secteur: "restaurant", superficie: 180,
-    prenom: "Marie", nom: "Lambert", email: "m.lambert@brasserie-marche.fr", telephone: "06 11 22 33 44",
-    creneaux: ["Matin (8h-12h)", "Après-midi (14h-18h)"], jours: ["Lundi", "Mercredi", "Vendredi"],
-    zones_sensibles: ["Cuisine", "Cave", "Poubelles"],
-    historique_nuisibles: "oui_recent", prestataire_actuel: false, rapports_a_jour: "non",
-    statut: "nouveau", technicien_id: null, date_audit_prevue: null, notes_internes: null,
-  },
-  {
-    id: "a2", created_at: "2026-05-20T14:15:00Z",
-    nom_etablissement: "Hôtel Belmont", adresse: "8 rue de Rivoli, 75001 Paris",
-    secteur: "hotel", superficie: 450,
-    prenom: "Thomas", nom: "Vidal", email: "t.vidal@hotel-belmont.com", telephone: "07 55 66 77 88",
-    creneaux: ["Matin (8h-12h)"], jours: ["Mardi", "Jeudi"],
-    zones_sensibles: ["Cuisine", "Réserves", "Livraisons"],
-    historique_nuisibles: "oui_ancien", prestataire_actuel: true, rapports_a_jour: "partiellement",
-    statut: "technicien assigné", technicien_id: "t1", date_audit_prevue: null, notes_internes: "Ancien prestataire Anticimex",
-  },
-];
-
 // ── Proposer Mission Panel ──────────────────────────────────────────────────
 function ProposerMissionPanel({
   audit,
@@ -471,10 +447,6 @@ export default function AdminAuditsPage() {
                           {techniciens.map(t => (
                             <option key={t.id} value={t.id}>{t.prenom} {t.nom}</option>
                           ))}
-                          {/* Demo fallback */}
-                          {techniciens.length === 0 && (
-                            <option value="demo-tech">Jean Martin (démo)</option>
-                          )}
                         </select>
                         <ChevronDown size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.4)", pointerEvents: "none" }} />
                       </div>

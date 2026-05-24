@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Target, Mail, TrendingUp, Euro, CheckCircle, X, ExternalLink, Loader2, AlertCircle, UserPlus } from "lucide-react";
-import { ADMIN_LEADS } from "@/lib/demo-data";
 
 const SECTEUR_MAP: Record<string, { label: string; color: string; bg: string }> = {
   restaurant:      { label: "Restaurant / Brasserie",     color: "#F59E0B", bg: "rgba(245,158,11,0.15)" },
@@ -38,28 +37,6 @@ interface Lead {
   score_risque: number;
   statut: LeadStatut;
   createdAt: string;
-}
-
-function normalizeDemoLeads(): Lead[] {
-  const statutMap: Record<string, LeadStatut> = {
-    "a_rappeler": "contacté",
-    "propose":    "devis_envoyé",
-    "signe":      "signé",
-  };
-  return ADMIN_LEADS.map(l => ({
-    id:              l.id,
-    email:           l.email,
-    nom_etablissement: l.nom_etablissement ?? null,
-    secteur:         l.secteur,
-    superficie:      l.superficie,
-    frequence:       l.frequence,
-    curatives:       l.curatives,
-    prixEstime:      l.prixEstime,
-    formuleSuggeree: l.formuleSuggeree,
-    score_risque:    l.score_risque,
-    statut:          statutMap[l.statut] ?? "nouveau",
-    createdAt:       l.createdAt,
-  }));
 }
 
 function relativeDate(dateStr: string): string {
@@ -213,12 +190,12 @@ export default function AdminLeadsPage() {
         const res = await fetch("/api/admin/leads");
         if (res.ok) {
           const data: Lead[] = await res.json();
-          setLeads(data.length > 0 ? data : normalizeDemoLeads());
+          setLeads(data);
         } else {
-          setLeads(normalizeDemoLeads());
+          setLeads([]);
         }
       } catch {
-        setLeads(normalizeDemoLeads());
+        setLeads([]);
       } finally {
         setLoading(false);
       }
