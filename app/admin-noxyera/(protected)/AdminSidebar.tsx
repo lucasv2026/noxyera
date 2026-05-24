@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck, UserCog } from 'lucide-react'
+import { Shield, LayoutDashboard, Users, Wrench, Target, LogOut, Calendar, TrendingUp, ClipboardList, SearchCheck, UserCog, Kanban } from 'lucide-react'
 
 const NAV = [
   { label: 'Tableau de bord', href: '/admin-noxyera', icon: LayoutDashboard },
   { label: "File d'attente", href: '/admin-noxyera/queue', icon: ClipboardList },
+  { label: 'CRM Pipeline', href: '/admin-noxyera/crm', icon: Kanban },
   { label: 'Clients CRM', href: '/admin-noxyera/clients', icon: Users },
   { label: 'Audits', href: '/admin-noxyera/audits', icon: SearchCheck },
   { label: 'Planning', href: '/admin-noxyera/planning', icon: Calendar },
@@ -63,16 +64,17 @@ export function AdminSidebar({ adminName, adminEmail, initials }: AdminSidebarPr
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+              className="flex items-center gap-3 py-2.5 rounded-xl text-sm transition-all"
               style={{
-                color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
-                background: active ? 'rgba(242,101,34,0.18)' : 'transparent',
+                color: active ? '#1B3A2D' : 'rgba(255,255,255,0.55)',
+                background: active ? '#ffffff' : 'transparent',
+                fontWeight: active ? 700 : 500,
                 paddingLeft: active ? '10px' : '12px',
                 paddingRight: '12px',
                 borderLeft: active ? '3px solid #F26522' : '3px solid transparent',
               }}
             >
-              <Icon size={15} style={{ color: active ? '#F26522' : 'inherit' }} />
+              <Icon size={15} style={{ color: active ? '#1B3A2D' : 'rgba(255,255,255,0.55)' }} />
               {label}
             </Link>
           )

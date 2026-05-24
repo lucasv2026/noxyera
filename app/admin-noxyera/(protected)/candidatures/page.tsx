@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { ClipboardList, Mail, Check, X, Loader2, Phone, MapPin, Star } from "lucide-react";
 
 type Candidature = {
@@ -205,7 +206,7 @@ export default function AdminCandidaturesPage() {
 
       {/* Filter tabs */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        {(["tous", "nouveau", "contacté", "entretien", "accepté"] as const).map(key => (
+        {(["tous", "nouveau", "accepté", "entretien"] as const).map(key => (
           <button
             key={key}
             onClick={() => setFilter(key)}
@@ -216,7 +217,7 @@ export default function AdminCandidaturesPage() {
               color: filter === key ? "white" : "rgba(255,255,255,0.55)",
             }}
           >
-            {key === "tous" ? "Tous" : (STATUT_CONFIG[key]?.label ?? key)}{" "}
+            {key === "tous" ? "Toutes" : (STATUT_CONFIG[key]?.label ?? key)}{" "}
             <span style={{ opacity: 0.7 }}>({counts[key as keyof typeof counts] ?? 0})</span>
           </button>
         ))}
@@ -381,6 +382,19 @@ export default function AdminCandidaturesPage() {
                         <Star size={12} /> Entretien
                       </button>
                     )}
+                  </div>
+
+                  {/* Voir le profil */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                    <Link
+                      href={`/admin-noxyera/candidatures/${c.id}`}
+                      style={{
+                        fontSize: 12, fontWeight: 600, color: "#F26522",
+                        textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
+                      }}
+                    >
+                      Voir le profil →
+                    </Link>
                   </div>
                 </div>
               );

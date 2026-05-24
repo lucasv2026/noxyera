@@ -228,7 +228,7 @@ export default function AdminAuditsPage() {
   const [audits, setAudits]           = useState<Audit[]>([]);
   const [techniciens, setTechniciens] = useState<Technicien[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [filter, setFilter]           = useState<string>("tous");
+  const [filter, setFilter]           = useState<string>("a-traiter");
   const [search, setSearch]           = useState("");
   const [saving, setSaving]           = useState<string | null>(null);
   const [toast, setToast]             = useState<string | null>(null);
@@ -307,11 +307,25 @@ export default function AdminAuditsPage() {
     });
   }
 
+  const A_TRAITER   = ["nouveau", "technicien assigné", "en_cours", "reçu"];
+  const CONFIRMES   = ["audit planifié", "planifié", "proposé", "confirmé"];
+  const TERMINES    = ["réalisé", "terminé", "devis envoyé", "signé"];
+
   const filtered = audits
-    .filter(a => filter === "tous" || a.statut === filter)
+    .filter(a => {
+      if (filter === "a-traiter") return A_TRAITER.includes(a.statut);
+      if (filter === "confirmes") return CONFIRMES.includes(a.statut);
+      if (filter === "termines")  return TERMINES.includes(a.statut);
+      return true;
+    })
     .filter(a => !search || a.nom_etablissement.toLowerCase().includes(search.toLowerCase()) || a.email.toLowerCase().includes(search.toLowerCase()));
 
-  const counts: Record<string, number> = { tous: audits.length, ...Object.fromEntries(STATUT_OPTIONS.map(s => [s, audits.filter(a => a.statut === s).length])) };
+  const counts = {
+    "a-traiter": audits.filter(a => A_TRAITER.includes(a.statut)).length,
+    "confirmes":  audits.filter(a => CONFIRMES.includes(a.statut)).length,
+    "termines":   audits.filter(a => TERMINES.includes(a.statut)).length,
+    tous: audits.length,
+  };
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0D1F17" }}>
@@ -350,10 +364,10 @@ export default function AdminAuditsPage() {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Total",     value: audits.length },
-          { label: "Nouveaux",  value: counts["nouveau"] ?? 0 },
-          { label: "Planifiés", value: counts["audit planifié"] ?? 0 },
-          { label: "Signés",    value: counts["signé"] ?? 0 },
+          { label: "Total",      value: audits.length },
+          { label: "À traiter",  value: counts["a-traiter"] ?? 0 },
+          { label: "Confirmés",  value: counts["confirmes"] ?? 0 },
+          { label: "Terminés",   value: counts["termines"] ?? 0 },
         ].map(({ label, value }) => (
           <div key={label} style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "16px 20px" }}>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px", fontFamily: "monospace" }}>{label}</p>
@@ -372,11 +386,14 @@ export default function AdminAuditsPage() {
             style={{ paddingLeft: 34, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "white", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" }}
           />
         </div>
-        {(["tous", ...STATUT_OPTIONS] as const).map(key => (
+        {([
+          { key: "a-traiter", label: "À traiter" },
+          { key: "confirmes",  label: "Confirmés" },
+          { key: "termines",   label: "Terminés" },
+        ]).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)}
             style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: filter === key ? "#F26522" : "rgba(255,255,255,0.07)", color: filter === key ? "white" : "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", gap: 5 }}>
-            {key === "audit planifié" && <span style={{ fontSize: 10, color: "#60A5FA" }}>→</span>}
-            {key === "tous" ? "Tous" : (STATUT_CFG[key]?.label ?? key)} ({counts[key as string] ?? 0})
+            {label} ({counts[key as keyof typeof counts] ?? 0})
           </button>
         ))}
       </div>
