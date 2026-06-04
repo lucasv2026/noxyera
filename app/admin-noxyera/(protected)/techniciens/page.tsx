@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, MapPin, Mail, Phone, ArrowRight } from "lucide-react";
+import { ShieldCheck, MapPin, Mail, Phone, ArrowRight, Clock } from "lucide-react";
 
 interface TechnicienRow {
   id: string;
@@ -10,6 +10,7 @@ interface TechnicienRow {
   ville: string | null;
   disponibilite: string | null;
   certifications: string[] | null;
+  onboarding_done: boolean | null;
   created_at: string;
 }
 
@@ -39,7 +40,7 @@ export default async function AdminTechniciensPage() {
 
     const { data: techData } = await supabase
       .from('profiles')
-      .select('id, prenom, nom, email, telephone, ville, disponibilite, certifications, created_at')
+      .select('id, prenom, nom, email, telephone, ville, disponibilite, certifications, onboarding_done, created_at')
       .eq('role', 'technicien')
       .order('created_at', { ascending: false });
 
@@ -89,6 +90,7 @@ export default async function AdminTechniciensPage() {
             value: interventionStats.filter(r => ['en_cours', 'planifie'].includes(r.statut)).length,
             color: "#F59E0B",
           },
+          { label: "En attente", value: techniciens.filter(t => !t.onboarding_done).length, color: "#F59E0B" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "#122B1E", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "16px 20px" }}>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px", fontFamily: "monospace" }}>
@@ -134,6 +136,15 @@ export default async function AdminTechniciensPage() {
                       <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>
                         {tech.prenom} {tech.nom}
                       </span>
+                      {!tech.onboarding_done ? (
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(245,158,11,0.12)", color: "#F59E0B", display: "flex", alignItems: "center", gap: 3 }}>
+                          <Clock size={9} /> En attente activation
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(16,185,129,0.1)", color: "#10B981" }}>
+                          Actif
+                        </span>
+                      )}
                       {tech.disponibilite && (
                         <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
                           {DISPO_MAP[tech.disponibilite] ?? tech.disponibilite}

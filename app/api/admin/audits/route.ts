@@ -86,19 +86,31 @@ export async function PATCH(request: Request) {
     }
   }
 
-  // Créer l'intervention avec statut='proposee' pour le technicien
+  // Créer (ou mettre à jour) l'intervention avec statut='proposee' pour le technicien
   if (statut === "audit planifié" && technicien_id && date_audit_prevue) {
     try {
       const { data: auditForIntervention } = await supabase.from("audits").select("nom_etablissement, adresse").eq("id", id).single()
-      await supabase.from("interventions").insert({
+      const offeredAt = new Date()
+      const expiresAt = new Date(offeredAt.getTime() + 24 * 60 * 60 * 1000) // +24h exactement
+      const interventionData = {
+        audit_id:      id,
         technicien_id,
-        type: "audit",
-        date_prevue: date_audit_prevue,
-        statut: "proposee",
+        type:          "audit",
+        date_prevue:   date_audit_prevue,
+        statut:        "proposee",
+        offered_at:    offeredAt.toISOString(),
+        expires_at:    expiresAt.toISOString(),
         notes: auditForIntervention
           ? `${auditForIntervention.nom_etablissement} - ${auditForIntervention.adresse}`
           : "Audit gratuit suite à demande client",
-      })
+      }
+      // Idempotent : une seule intervention par audit (clé audit_id)
+      const { data: existingIntervention } = await supabase
+        .from("interventions").select("id").eq("audit_id", id).maybeSingle()
+      const { error: interventionError } = existingIntervention?.id
+        ? await supabase.from("interventions").update(interventionData).eq("id", existingIntervention.id)
+        : await supabase.from("interventions").insert(interventionData)
+      if (interventionError) console.error("CREATE INTERVENTION ERROR:", JSON.stringify(interventionError))
     } catch (interventionErr) {
       console.error("CREATE INTERVENTION ERROR:", interventionErr)
     }

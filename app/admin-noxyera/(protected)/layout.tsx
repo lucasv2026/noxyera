@@ -60,7 +60,7 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
         <span className="text-white font-bold tracking-widest text-sm">NOXYERA ADMIN</span>
       </header>
 
-      <main className="lg:pl-60">{children}</main>
+      <main className="lg:pl-56">{children}</main>
     </div>
   )
 }

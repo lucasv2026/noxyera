@@ -47,36 +47,31 @@ export async function POST(
   const offeredAt = new Date()
   const expiresAt = new Date(offeredAt.getTime() + 24 * 60 * 60 * 1000) // +24h exactement
 
-  // 3. Find or create intervention for this audit
+  // 3. Find or create intervention for this audit (clé stable = audit_id, idempotent)
+  const interventionData = {
+    audit_id:      params.id,
+    technicien_id: technicienId,
+    type:          "audit",
+    date_prevue:   audit.date_audit_prevue ?? new Date().toISOString(),
+    statut:        "proposee",
+    offered_at:    offeredAt.toISOString(),
+    expires_at:    expiresAt.toISOString(),
+    notes:         `Audit — ${audit.nom_etablissement} — ${audit.adresse}`,
+  }
+
   const { data: existing } = await supabase
     .from("interventions")
     .select("id")
-    .eq("type", "audit")
-    .eq("technicien_id", audit.technicien_id ?? technicienId)
+    .eq("audit_id", params.id)
     .maybeSingle()
 
-  if (existing?.id) {
-    await supabase
-      .from("interventions")
-      .update({
-        technicien_id: technicienId,
-        statut:        "proposee",
-        offered_at:    offeredAt.toISOString(),
-        expires_at:    expiresAt.toISOString(),
-      })
-      .eq("id", existing.id)
-  } else {
-    await supabase
-      .from("interventions")
-      .insert({
-        technicien_id: technicienId,
-        type:          "audit",
-        date_prevue:   audit.date_audit_prevue ?? new Date().toISOString(),
-        statut:        "proposee",
-        offered_at:    offeredAt.toISOString(),
-        expires_at:    expiresAt.toISOString(),
-        notes:         `Audit — ${audit.nom_etablissement} — ${audit.adresse}`,
-      })
+  const { error: interventionError } = existing?.id
+    ? await supabase.from("interventions").update(interventionData).eq("id", existing.id)
+    : await supabase.from("interventions").insert(interventionData)
+
+  if (interventionError) {
+    console.error("PROPOSER INTERVENTION ERROR:", JSON.stringify(interventionError))
+    return NextResponse.json({ success: false, error: interventionError.message }, { status: 500 })
   }
 
   // 4. Update audit statut → 'proposé'

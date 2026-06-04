@@ -193,6 +193,16 @@ interface InterventionWithTech {
   notes?: string;
 }
 
+// Forme renvoyée par GET /api/admin/interventions
+interface ApiIntervention {
+  id: string;
+  date_prevue: string;
+  type: TypeIntervention;
+  statut: StatutIntervention;
+  technicien_id: string | null;
+  notes: string | null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 function getWeekDays(refDate: Date): Date[] {
   const day = refDate.getDay();
@@ -227,7 +237,8 @@ function TypeBadge({ type }: { type: TypeIntervention }) {
     preventif: { label: "Préventif", bg: "rgba(96,165,250,0.15)", color: "#60A5FA" },
     curatif:   { label: "Curatif",   bg: "rgba(245,158,11,0.15)", color: "#F59E0B" },
     urgence:   { label: "Urgence",   bg: "rgba(220,38,38,0.15)",  color: "#DC2626" },
-  }[type];
+    audit:     { label: "Audit",     bg: "rgba(29,78,216,0.15)",  color: "#60A5FA" },
+  }[type] ?? { label: type, bg: "rgba(148,163,184,0.15)", color: "#94A3B8" };
   return (
     <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: cfg.bg, color: cfg.color }}>
       {cfg.label}
@@ -365,11 +376,34 @@ export default function PlanningPage() {
   const [interventions, setInterventions] = useState<InterventionWithTech[]>([]);
   const [techniciens, setTechniciens] = useState<Technicien[]>([]);
   const [assignTarget, setAssignTarget] = useState<InterventionWithTech | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     fetch("/api/admin/audits")
       .then(r => r.ok ? r.json() : { techniciens: [] })
       .then(data => setTechniciens(data.techniciens ?? []))
+      .catch(() => {});
+
+    fetch("/api/admin/interventions")
+      .then(r => r.ok ? r.json() : { interventions: [] })
+      .then((data: { interventions?: ApiIntervention[] }) => {
+        setInterventions(
+          (data.interventions ?? []).map((i) => ({
+            id:           i.id,
+            clientId:     "",
+            date:         i.date_prevue,
+            type:         i.type,
+            statut:       i.statut,
+            technicienId: i.technicien_id,
+            notes:        i.notes ?? undefined,
+          }))
+        );
+      })
       .catch(() => {});
   }, []);
 
@@ -387,14 +421,40 @@ export default function PlanningPage() {
   const nonAssignees = interventions.filter(i => !i.technicienId);
   const assignees = interventions.filter(i => i.technicienId);
 
-  function handleAssign(interventionId: string, techId: string) {
-    setInterventions(prev =>
-      prev.map(i => i.id === interventionId ? { ...i, technicienId: techId, statut: "planifiee" as StatutIntervention } : i)
-    );
+  async function handleAssign(interventionId: string, techId: string) {
+    try {
+      const res = await fetch(`/api/admin/missions/${interventionId}/offrir`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicienId: techId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setInterventions(prev =>
+          prev.map(i => i.id === interventionId ? { ...i, technicienId: techId, statut: "proposee" as StatutIntervention } : i)
+        );
+        showToast("Offre envoyée au technicien — en attente d'acceptation ✓");
+      } else {
+        showToast(data.error ?? "Erreur lors de l'envoi de l'offre");
+      }
+    } catch {
+      showToast("Erreur réseau");
+    }
   }
 
   return (
     <div className="p-5 space-y-5 min-h-screen" style={{ background: "#0D1F17" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 9999,
+          background: "#1B3A2D", color: "white", padding: "12px 20px", borderRadius: 12,
+          fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+        }}>
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

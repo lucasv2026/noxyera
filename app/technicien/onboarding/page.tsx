@@ -48,6 +48,14 @@ export default function TechnicienOnboardingPage() {
         setLoading(false);
         return;
       }
+      // Mark onboarding as done so auth callback won't redirect here again
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ onboarding_done: true })
+          .eq("user_id", user.id);
+      }
       setSuccess(true);
       setTimeout(() => {
         window.location.href = "/technicien/missions";
